@@ -6,12 +6,39 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma skills sync || exit 0",
+    "db:emit": "prisma contract emit",
+    "db:plan": "prisma migration plan",
+    "db:migrate": "prisma db migrate",
+    "db:update": "prisma db update",
+    "worker:webhooks": "tsx --import dotenv/config workers/webhook.worker.ts",
+    "worker:sync": "tsx --import dotenv/config workers/shopify-sync.worker.ts",
+    "worker:import": "tsx --import dotenv/config workers/loox-import.worker.ts",
+    "worker:email": "tsx --import dotenv/config workers/review-email.worker.ts",
+    "worker:media": "tsx --import dotenv/config workers/media.worker.ts",
+    "worker:ratings": "tsx --import dotenv/config workers/shopify-ratings.worker.ts",
+    "shopify:dev": "shopify app dev",
+    "shopify:deploy": "node scripts/prepare-shopify-deploy.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@aws-sdk/s3-request-presigner": "^3.1121.0",
+    "@prisma/client": "^7.10.0",
+    "@prisma/orm-postgres": "^8.0.0-rc.8",
+    "@shopify/app": "^3.58.2",
+    "@shopify/app-bridge-react": "^4.2.13",
+    "@shopify/cli": "^4.7.0",
+    "@shopify/polaris": "^13.9.5",
+    "@shopify/shopify-api": "^14.0.0",
+    "bullmq": "^6.3.1",
+    "ioredis": "^6.0.0",
     "next": "16.3.3",
+    "prisma": "^8.0.0-rc.12",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4",
+    "temporal-polyfill": "^1.0.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +48,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

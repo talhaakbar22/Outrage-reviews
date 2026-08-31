@@ -1,0 +1,28 @@
+# Learn more: https://shopify.dev/docs/api/shopify-cli/configuration
+#
+# Local dev:  yarn shopify:dev  (CLI tunnel overrides localhost URLs)
+# Deploy:     yarn shopify:deploy  (requires SHOPIFY_APP_URL=https://… in .env)
+
+client_id = "a8568adbcd8de4fde3d72f2a77cd5172"
+name = "Outrage Reviews"
+application_url = "http://localhost:3000"
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+
+[access_scopes]
+scopes = "read_products,write_products,read_orders,read_customers,write_app_proxy"
+
+[auth]
+redirect_urls = [
+  "http://localhost:3000/api/auth/callback"
+]
+
+[app_proxy]
+url = "/api/storefront"
+subpath = "outrage-reviews"
+prefix = "apps"
+
+[webhooks]
+api_version = "2026-01"

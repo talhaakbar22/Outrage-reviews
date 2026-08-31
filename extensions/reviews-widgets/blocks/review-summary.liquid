@@ -1,0 +1,97 @@
+{% comment %}
+  Review summary: average, count, and rating breakdown bars from metafields.
+{% endcomment %}
+
+{% liquid
+  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_value = 0
+  assign review_count = 0
+  assign breakdown = null
+
+  if rating_product
+    if rating_product.metafields.reviews.rating.value != blank
+      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    endif
+    if rating_product.metafields.reviews.count.value != blank
+      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+    endif
+    if rating_product.metafields.reviews.rating_breakdown.value != blank
+      assign breakdown = rating_product.metafields.reviews.rating_breakdown.value
+    endif
+  endif
+%}
+
+{% if rating_product and review_count > 0 %}
+  <section
+    class="or-summary"
+    data-outrage-summary
+    data-product-id="{{ rating_product.id }}"
+    {{ block.shopify_attributes }}
+  >
+    <div class="or-summary__hero">
+      {% render 'stars', rating: rating_value, size: 22, color: block.settings.star_color %}
+      <p class="or-summary__average">{{ rating_value | round: 1 }} out of 5</p>
+      <p class="or-summary__count">Based on {{ review_count }} {% if review_count == 1 %}review{% else %}reviews{% endif %}</p>
+    </div>
+
+    {% if breakdown %}
+      <ul class="or-summary__bars" aria-label="Rating breakdown">
+        {% for star in (1..5) reversed %}
+          {% assign key = star | append: '' %}
+          {% assign star_count = breakdown[key] | default: 0 %}
+          {% if review_count > 0 %}
+            {% assign width = star_count | times: 100.0 | divided_by: review_count %}
+          {% else %}
+            {% assign width = 0 %}
+          {% endif %}
+          <li class="or-summary__row">
+            <span class="or-summary__label">{{ star }}★</span>
+            <span class="or-summary__track" aria-hidden="true">
+              <span class="or-summary__fill" style="width: {{ width }}%; background: {{ block.settings.star_color }};"></span>
+            </span>
+            <span class="or-summary__value">{{ star_count }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+{% elsif block.settings.show_empty %}
+  <section class="or-summary or-summary--empty" {{ block.shopify_attributes }}>
+    <p>{{ block.settings.empty_label }}</p>
+  </section>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Review summary",
+  "target": "section",
+  "stylesheet": "reviews-widget.css",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product",
+      "info": "Defaults to the current product on product pages."
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#F5A623"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_empty",
+      "label": "Show when there are no reviews",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "empty_label",
+      "label": "Empty state label",
+      "default": "Be the first to review this product."
+    }
+  ]
+}
+{% endschema %}

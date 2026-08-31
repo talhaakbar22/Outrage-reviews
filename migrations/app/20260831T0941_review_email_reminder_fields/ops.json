@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.review_request.remindedAt",
+    "label": "Add column \"remindedAt\" to \"review_request\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "remindedAt",
+        "table": "review_request"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"remindedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "review_request",
+          "remindedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"remindedAt\"",
+        "sql": "ALTER TABLE \"public\".\"review_request\" ADD COLUMN \"remindedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"remindedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "review_request",
+          "remindedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.shop_settings.reminderDelayDays",
+    "label": "Add column \"reminderDelayDays\" to \"shop_settings\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "reminderDelayDays",
+        "table": "shop_settings"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"reminderDelayDays\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "shop_settings",
+          "reminderDelayDays"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"reminderDelayDays\"",
+        "sql": "ALTER TABLE \"public\".\"shop_settings\" ADD COLUMN \"reminderDelayDays\" int4 DEFAULT 7 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"reminderDelayDays\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "shop_settings",
+          "reminderDelayDays"
+        ]
+      }
+    ]
+  }
+]

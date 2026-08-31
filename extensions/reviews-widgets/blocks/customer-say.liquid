@@ -1,0 +1,112 @@
+{% comment %}
+  "What customers say" — AI-style review summary with theme tags, quote snippets,
+  and paginated full review list.
+{% endcomment %}
+
+{% liquid
+  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_value = 0
+  assign review_count = 0
+
+  if rating_product
+    if rating_product.metafields.reviews.rating.value != blank
+      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    endif
+    if rating_product.metafields.reviews.count.value != blank
+      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+    endif
+  endif
+
+  if block.settings.api_base_url != blank
+    assign summary_endpoint = block.settings.api_base_url | append: '/api/storefront/customer-say'
+  else
+    assign summary_endpoint = '/apps/outrage-reviews/customer-say'
+  endif
+%}
+
+{% if rating_product %}
+  <section
+    class="or-customer-say"
+    data-outrage-customer-say
+    data-product-id="{{ rating_product.id }}"
+    data-endpoint="{{ summary_endpoint | escape }}"
+    data-reviews-page-size="{{ block.settings.reviews_page_size }}"
+    {{ block.shopify_attributes }}
+  >
+    <div class="or-customer-say__shell">
+      <div class="or-customer-say__hero">
+        <div class="or-customer-say__score">
+          <p class="or-customer-say__average" data-outrage-average>
+            {% if review_count > 0 %}{{ rating_value | round: 2 }}{% else %}—{% endif %}
+          </p>
+          {% render 'stars', rating: rating_value, size: 18, color: block.settings.star_color %}
+          <p class="or-customer-say__verified" data-outrage-verified-count>
+            {% if review_count > 0 %}{{ review_count }} verified reviews{% endif %}
+          </p>
+        </div>
+
+        <div class="or-customer-say__summary">
+          <p class="or-customer-say__heading">What customers say</p>
+          <p class="or-customer-say__text" data-outrage-summary-text>
+            Loading customer summary…
+          </p>
+          <p class="or-customer-say__meta" data-outrage-summary-meta hidden></p>
+        </div>
+      </div>
+
+      <div class="or-customer-say__tags" data-outrage-highlights hidden></div>
+      <div class="or-customer-say__snippets" data-outrage-snippets hidden></div>
+
+      <div class="or-customer-say__actions">
+        <button type="button" class="or-customer-say__read-all" data-outrage-read-all hidden>
+          Read all reviews
+        </button>
+      </div>
+
+      <div class="or-customer-say__reviews" data-outrage-reviews-panel hidden>
+        <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
+        <button type="button" class="or-customer-say__load-more" data-outrage-load-more hidden>
+          Load more reviews
+        </button>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+{% schema %}
+{
+  "name": "What customers say",
+  "target": "section",
+  "stylesheet": "reviews-widget.css",
+  "javascript": "customer-say-widget.js",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product"
+    },
+    {
+      "type": "range",
+      "id": "reviews_page_size",
+      "min": 5,
+      "max": 20,
+      "step": 1,
+      "label": "Reviews per page",
+      "default": 10
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#F5A623"
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "App URL (optional)",
+      "info": "Leave blank to use the Shopify app proxy (/apps/outrage-reviews)."
+    }
+  ]
+}
+{% endschema %}

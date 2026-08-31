@@ -1,0 +1,128 @@
+[
+  {
+    "id": "column.public.product.avgRating",
+    "label": "Add column \"avgRating\" to \"product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "avgRating",
+        "table": "product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"avgRating\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "avgRating"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"avgRating\"",
+        "sql": "ALTER TABLE \"public\".\"product\" ADD COLUMN \"avgRating\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"avgRating\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "avgRating"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.product.lastSyncedAt",
+    "label": "Add column \"lastSyncedAt\" to \"product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastSyncedAt",
+        "table": "product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastSyncedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "lastSyncedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastSyncedAt\"",
+        "sql": "ALTER TABLE \"public\".\"product\" ADD COLUMN \"lastSyncedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastSyncedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "lastSyncedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.product.reviewCount",
+    "label": "Add column \"reviewCount\" to \"product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "reviewCount",
+        "table": "product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"reviewCount\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "reviewCount"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"reviewCount\"",
+        "sql": "ALTER TABLE \"public\".\"product\" ADD COLUMN \"reviewCount\" int4 DEFAULT 0 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"reviewCount\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "product",
+          "reviewCount"
+        ]
+      }
+    ]
+  }
+]

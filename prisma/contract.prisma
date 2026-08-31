@@ -1,0 +1,400 @@
+// use prisma-next
+
+enum ReviewStatus {
+  @@type("pg/text@1")
+  Pending  = "pending"
+  Approved = "approved"
+  Rejected = "rejected"
+  Spam     = "spam"
+  Published = "published"
+}
+
+enum ReviewSource {
+  @@type("pg/text@1")
+  Native       = "native"
+  Import       = "import"
+  EmailRequest = "email_request"
+  Widget       = "widget"
+  Api          = "api"
+}
+
+enum ReviewMediaType {
+  @@type("pg/text@1")
+  Image = "image"
+  Video = "video"
+}
+
+enum ReviewRequestStatus {
+  @@type("pg/text@1")
+  Pending   = "pending"
+  Sent      = "sent"
+  Opened    = "opened"
+  Completed = "completed"
+  Expired   = "expired"
+  Cancelled = "cancelled"
+}
+
+enum WebhookEventStatus {
+  @@type("pg/text@1")
+  Pending   = "pending"
+  Processed = "processed"
+  Failed    = "failed"
+}
+
+enum SyncJobStatus {
+  @@type("pg/text@1")
+  Pending   = "pending"
+  Running   = "running"
+  Completed = "completed"
+  Failed    = "failed"
+}
+
+enum SyncJobType {
+  @@type("pg/text@1")
+  Products      = "products"
+  Orders        = "orders"
+  Customers     = "customers"
+  ReviewsImport = "reviews_import"
+  FullSync      = "full_sync"
+}
+
+enum ProductStatus {
+  @@type("pg/text@1")
+  Active   = "active"
+  Archived = "archived"
+  Draft    = "draft"
+}
+
+model Shop {
+  id              Uuid     @id @default(uuid())
+  shopifyDomain   String   @unique
+  shopifyShopId   String   @unique
+  name            String?
+  email           String?
+  currency        String?
+  timezone        String?
+  installedAt     DateTime @default(now())
+  uninstalledAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       temporal.updatedAt()
+
+  users           User[]
+  sessions        ShopifySession[]
+  products        Product[]
+  orders          Order[]
+  customers       Customer[]
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
+  webhookEvents   WebhookEvent[]
+  syncJobs        SyncJob[]
+  settings        ShopSettings?
+  aiSummaries     AiSummary[]
+
+  @@map("shop")
+}
+
+model User {
+  id              Uuid     @id @default(uuid())
+  shopId          Uuid
+  shopifyUserId   String?
+  email           String
+  firstName       String?
+  lastName        String?
+  role            String?
+  createdAt       DateTime @default(now())
+  updatedAt       temporal.updatedAt()
+
+  shop            Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reviewReplies   ReviewReply[]
+
+  @@unique([shopId, email])
+  @@index([shopId])
+  @@map("user")
+}
+
+model ShopifySession {
+  id           Uuid     @id @default(uuid())
+  shopId       Uuid
+  sessionId    String   @unique
+  isOnline     Boolean  @default(false)
+  state        String?
+  scope        String?
+  accessToken  String
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    temporal.updatedAt()
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@map("shopify_session")
+}
+
+model Product {
+  id                Uuid          @id @default(uuid())
+  shopId            Uuid
+  shopifyProductId  String
+  title             String
+  handle            String?
+  imageUrl          String?
+  avgRating         Float?
+  reviewCount       Int           @default(0)
+  ratingBreakdown   Json?
+  lastSyncedAt      DateTime?
+  status            ProductStatus @default(Active)
+  createdAt         DateTime      @default(now())
+  updatedAt         temporal.updatedAt()
+
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reviews         Review[]
+  orderLineItems  OrderLineItem[]
+  reviewRequests  ReviewRequest[]
+  aiSummaries     AiSummary[]
+
+  @@unique([shopId, shopifyProductId])
+  @@index([shopId])
+  @@map("product")
+}
+
+model Customer {
+  id                  Uuid     @id @default(uuid())
+  shopId              Uuid
+  shopifyCustomerId   String?
+  email               String?
+  firstName           String?
+  lastName            String?
+  createdAt           DateTime @default(now())
+  updatedAt           temporal.updatedAt()
+
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orders          Order[]
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
+
+  @@unique([shopId, shopifyCustomerId])
+  @@index([shopId, email])
+  @@map("customer")
+}
+
+model Order {
+  id                  Uuid     @id @default(uuid())
+  shopId              Uuid
+  customerId          Uuid?
+  shopifyOrderId      String
+  shopifyOrderNumber  String?
+  email               String?
+  fulfillmentStatus   String?
+  fulfilledAt         DateTime?
+  deliveredAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           temporal.updatedAt()
+
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer        Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lineItems       OrderLineItem[]
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
+
+  @@unique([shopId, shopifyOrderId])
+  @@index([shopId])
+  @@index([customerId])
+  @@map("order")
+}
+
+model OrderLineItem {
+  id                  Uuid     @id @default(uuid())
+  orderId             Uuid
+  productId           Uuid?
+  shopifyLineItemId   String
+  title               String
+  quantity            Int      @default(1)
+  sku                 String?
+  createdAt           DateTime @default(now())
+  updatedAt           temporal.updatedAt()
+
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  reviews         Review[]
+  reviewRequests  ReviewRequest[]
+
+  @@unique([orderId, shopifyLineItemId])
+  @@index([productId])
+  @@map("order_line_item")
+}
+
+model Review {
+  id                  Uuid         @id @default(uuid())
+  shopId              Uuid
+  productId           Uuid
+  customerId          Uuid?
+  orderId             Uuid?
+  orderLineItemId     Uuid?
+  externalId          String?
+  rating              Int
+  title               String?
+  body                String?
+  status              ReviewStatus @default(Pending)
+  isVerifiedPurchase  Boolean      @default(false)
+  source              ReviewSource @default(Native)
+  reviewerName        String?
+  reviewerEmail       String?
+  merchantReply       String?
+  merchantRepliedAt   DateTime?
+  publishedAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           temporal.updatedAt()
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer      Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderLineItem OrderLineItem? @relation(fields: [orderLineItemId], references: [id], onDelete: SetNull)
+  media         ReviewMedia[]
+  replies       ReviewReply[]
+
+  @@unique([shopId, externalId])
+  @@unique([orderLineItemId])
+  @@index([shopId, status])
+  @@index([productId])
+  @@index([orderId])
+  @@index([orderLineItemId])
+  @@map("review")
+}
+
+model ReviewMedia {
+  id           Uuid            @id @default(uuid())
+  reviewId     Uuid
+  type         ReviewMediaType
+  url          String
+  thumbnailUrl String?
+  altText      String?
+  sortOrder    Int             @default(0)
+  createdAt    DateTime        @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@map("review_media")
+}
+
+model ReviewReply {
+  id          Uuid     @id @default(uuid())
+  reviewId    Uuid
+  userId      Uuid?
+  body        String
+  authorName  String?
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   temporal.updatedAt()
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([reviewId])
+  @@map("review_reply")
+}
+
+model ReviewRequest {
+  id              Uuid                @id @default(uuid())
+  shopId          Uuid
+  orderId         Uuid?
+  orderLineItemId Uuid?
+  customerId      Uuid?
+  productId       Uuid?
+  email           String
+  status          ReviewRequestStatus @default(Pending)
+  tokenHash       String              @unique
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  remindedAt      DateTime?
+  openedAt        DateTime?
+  completedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       temporal.updatedAt()
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderLineItem OrderLineItem? @relation(fields: [orderLineItemId], references: [id], onDelete: SetNull)
+  customer      Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  product       Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status])
+  @@index([orderId])
+  @@map("review_request")
+}
+
+model WebhookEvent {
+  id               Uuid               @id @default(uuid())
+  shopId           Uuid
+  topic            String
+  shopifyWebhookId String?
+  payload          Json
+  status           WebhookEventStatus @default(Pending)
+  errorMessage     String?
+  processedAt      DateTime?
+  createdAt        DateTime           @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+  @@index([topic])
+  @@map("webhook_event")
+}
+
+model SyncJob {
+  id           Uuid          @id @default(uuid())
+  shopId       Uuid
+  type         SyncJobType
+  status       SyncJobStatus @default(Pending)
+  payload      Json?
+  errorMessage String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    temporal.updatedAt()
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+  @@index([type])
+  @@map("sync_job")
+}
+
+model ShopSettings {
+  id                  Uuid     @id @default(uuid())
+  shopId              Uuid     @unique
+  autoPublishReviews  Boolean  @default(false)
+  minRatingToPublish  Int      @default(4)
+  requestDelayDays    Int      @default(7)
+  reminderDelayDays   Int      @default(7)
+  emailEnabled        Boolean  @default(true)
+  widgetEnabled       Boolean  @default(true)
+  branding            Json?
+  createdAt           DateTime @default(now())
+  updatedAt           temporal.updatedAt()
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_settings")
+}
+
+model AiSummary {
+  id             Uuid     @id @default(uuid())
+  shopId         Uuid
+  productId      Uuid
+  summaryText    String
+  highlights     Json?
+  sentimentScore Float?
+  modelVersion   String?
+  generatedAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      temporal.updatedAt()
+
+  shop    Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, productId])
+  @@index([productId])
+  @@map("ai_summary")
+}

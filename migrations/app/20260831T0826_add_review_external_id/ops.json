@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.review.externalId",
+    "label": "Add column \"externalId\" to \"review\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "externalId",
+        "table": "review"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"externalId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "review",
+          "externalId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"externalId\"",
+        "sql": "ALTER TABLE \"public\".\"review\" ADD COLUMN \"externalId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"externalId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "review",
+          "externalId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.review.review_shopId_externalId_key",
+    "label": "Add unique constraint on \"review\" (shopId, externalId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "review_shopId_externalId_key",
+        "table": "review"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"review_shopId_externalId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "review_shopId_externalId_key",
+          "public",
+          "\"public\".\"review\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"review_shopId_externalId_key\"",
+        "sql": "ALTER TABLE \"public\".\"review\" ADD CONSTRAINT \"review_shopId_externalId_key\" UNIQUE (\"shopId\", \"externalId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"review_shopId_externalId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "review_shopId_externalId_key",
+          "public",
+          "\"public\".\"review\""
+        ]
+      }
+    ]
+  }
+]

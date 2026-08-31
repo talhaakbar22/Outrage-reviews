@@ -1,0 +1,100 @@
+{% comment %}
+  Star rating from product metafields (reviews.rating / reviews.count).
+  No network request — safe for collection product cards and PDP headers.
+{% endcomment %}
+
+{% liquid
+  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_value = 0
+  assign review_count = 0
+
+  if rating_product
+    if rating_product.metafields.reviews.rating.value != blank
+      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    endif
+    if rating_product.metafields.reviews.count.value != blank
+      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+    endif
+  endif
+
+  assign show_empty = block.settings.show_empty
+  assign show_count = block.settings.show_count
+  assign star_size = block.settings.star_size
+  assign star_color = block.settings.star_color
+%}
+
+{% if rating_product %}
+  {% if review_count > 0 or show_empty %}
+  <div
+    class="or-stars"
+    data-outrage-stars
+    data-product-id="{{ rating_product.id }}"
+    style="--or-star-size: {{ star_size }}px; --or-star-color: {{ star_color }};"
+    {{ block.shopify_attributes }}
+  >
+    {% render 'stars', rating: rating_value, size: star_size, color: star_color %}
+
+    {% if show_count %}
+      <span class="or-stars__count">
+        {% if review_count > 0 %}
+          {{ rating_value | round: 1 }} · {{ review_count }}
+          {% if review_count == 1 %}review{% else %}reviews{% endif %}
+        {% else %}
+          {{ block.settings.empty_label }}
+        {% endif %}
+      </span>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endif %}
+
+{% schema %}
+{
+  "name": "Star rating",
+  "target": "section",
+  "stylesheet": "reviews-widget.css",
+  "templates": ["product", "collection", "index", "search"],
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product",
+      "info": "Leave blank to use the closest product in context (recommended for product cards)."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Show rating count",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_empty",
+      "label": "Show when there are no reviews",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "empty_label",
+      "label": "Empty state label",
+      "default": "No reviews yet"
+    },
+    {
+      "type": "range",
+      "id": "star_size",
+      "min": 12,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Star size",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#F5A623"
+    }
+  ]
+}
+{% endschema %}

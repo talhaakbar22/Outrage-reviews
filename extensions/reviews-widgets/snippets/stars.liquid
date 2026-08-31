@@ -1,0 +1,28 @@
+{% comment %} Reusable star row. rating: 0-5 number {% endcomment %}
+{% liquid
+  assign safe_rating = rating | default: 0 | times: 1.0
+  assign rounded = safe_rating | times: 2 | round | divided_by: 2.0
+  assign star_size = size | default: 16
+  assign star_color = color | default: '#F5A623'
+%}
+
+<span
+  class="or-star-row"
+  style="--or-star-size: {{ star_size }}px; --or-star-color: {{ star_color }};"
+  role="img"
+  aria-label="{{ safe_rating | round: 1 }} out of 5 stars"
+>
+  {% for i in (1..5) %}
+    {% assign threshold = i %}
+    {% if rounded >= threshold %}
+      <span class="or-star or-star--full" aria-hidden="true">★</span>
+    {% else %}
+      {% assign half_threshold = i | minus: 0.5 %}
+      {% if rounded >= half_threshold %}
+        <span class="or-star or-star--half" aria-hidden="true">★</span>
+      {% else %}
+        <span class="or-star or-star--empty" aria-hidden="true">★</span>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+</span>

@@ -1,0 +1,102 @@
+{% comment %}
+  Review list + photos. Metafields provide the headline; JS loads published reviews
+  via App Proxy (preferred) or a direct app API URL setting.
+{% endcomment %}
+
+{% liquid
+  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_value = 0
+  assign review_count = 0
+
+  if rating_product
+    if rating_product.metafields.reviews.rating.value != blank
+      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    endif
+    if rating_product.metafields.reviews.count.value != blank
+      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+    endif
+  endif
+
+  if block.settings.api_base_url != blank
+    assign reviews_endpoint = block.settings.api_base_url | append: '/api/storefront/reviews'
+  else
+    assign reviews_endpoint = '/apps/outrage-reviews/reviews'
+  endif
+%}
+
+{% if rating_product %}
+  <section
+    class="or-reviews"
+    data-outrage-reviews
+    data-product-id="{{ rating_product.id }}"
+    data-endpoint="{{ reviews_endpoint | escape }}"
+    data-limit="{{ block.settings.limit }}"
+    data-show-photos="{{ block.settings.show_photos }}"
+    {{ block.shopify_attributes }}
+  >
+    <header class="or-reviews__header">
+      <h2 class="or-reviews__title">{{ block.settings.heading }}</h2>
+      {% if review_count > 0 %}
+        <div class="or-reviews__meta">
+          {% render 'stars', rating: rating_value, size: 18, color: block.settings.star_color %}
+          <span>{{ rating_value | round: 1 }} · {{ review_count }} reviews</span>
+        </div>
+      {% endif %}
+    </header>
+
+    <div class="or-reviews__photos" data-outrage-photos hidden></div>
+    <div class="or-reviews__list" data-outrage-list>
+      <p class="or-reviews__loading">Loading reviews…</p>
+    </div>
+  </section>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Review list",
+  "target": "section",
+  "stylesheet": "reviews-widget.css",
+  "javascript": "reviews-widget.js",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Customer reviews"
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "min": 3,
+      "max": 30,
+      "step": 1,
+      "label": "Reviews to load",
+      "default": 10
+    },
+    {
+      "type": "checkbox",
+      "id": "show_photos",
+      "label": "Show photo gallery",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#F5A623"
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "App URL (optional)",
+      "info": "Leave blank to use the Shopify app proxy (/apps/outrage-reviews). Example: https://your-app.example.com"
+    }
+  ]
+}
+{% endschema %}
