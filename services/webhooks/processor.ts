@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { upsertProduct } from "@/services/products/repository";
 import { markShopUninstalled } from "@/services/shop/service";
 import { WEBHOOK_TOPICS } from "@/services/webhooks/topics";
@@ -210,7 +210,7 @@ async function handleProductUpdate(shopId: string, payload: unknown) {
     handle: product.handle,
     imageUrl: product.imageUrl,
     status: product.status,
-    lastSyncedAt: new Date(),
+    lastSyncedAt: nowInstant(),
   });
 }
 

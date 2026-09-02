@@ -1,4 +1,5 @@
 import "temporal-polyfill/full/global";
+import { Temporal } from "temporal-polyfill";
 import postgres from "@prisma/orm-postgres/runtime";
 import type { Contract } from "@/prisma/contract.d.ts";
 import contractJson from "@/prisma/contract.json" with { type: "json" };
@@ -64,3 +65,15 @@ export async function connectDb() {
 
 /** @alias getDb */
 export const prisma = getDb;
+
+export function nowInstant() {
+  return Temporal.Now.instant();
+}
+
+export type DbInstant = ReturnType<typeof nowInstant>;
+
+export function toInstant(value: Date | DbInstant): DbInstant {
+  return value instanceof Temporal.Instant
+    ? value
+    : Temporal.Instant.fromEpochMilliseconds(value.getTime());
+}

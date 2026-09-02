@@ -72,7 +72,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   key={review.id}
                   review={{
                     ...review,
-                    createdAt: review.createdAt.toISOString(),
+                    createdAt: review.createdAt?.toISOString(),
                   }}
                   detailHref={withShopPath(
                     `/dashboard/reviews/${review.id}`,

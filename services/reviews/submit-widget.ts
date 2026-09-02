@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { enqueueMediaProcessing } from "@/lib/queue";
 import { assertPendingUploadKey } from "@/services/media/keys";
 import {
@@ -6,6 +6,7 @@ import {
   headObject,
 } from "@/services/media/object-storage";
 import type { SubmitMediaReference } from "@/services/media/types";
+import { ensureProductSynced } from "@/services/products/ensure-synced";
 import { publishProductRatings } from "@/services/reviews/ratings";
 import { getShopByDomain } from "@/services/storefront/reviews";
 
@@ -100,10 +101,14 @@ export async function submitReviewFromWidget(input: SubmitWidgetReviewInput) {
   const shopifyProductId =
     input.shopifyProductId.replace(/\D/g, "") || input.shopifyProductId;
 
-  const product = await db.orm.public.Product.where({
+  let product = await db.orm.public.Product.where({
     shopId: shop.id,
     shopifyProductId,
   }).first();
+
+  if (!product) {
+    product = await ensureProductSynced(shop.id, shopifyProductId);
+  }
 
   if (!product) {
     throw new WidgetReviewError("Product not found.", "product_not_found");
@@ -115,7 +120,7 @@ export async function submitReviewFromWidget(input: SubmitWidgetReviewInput) {
     minRatingToPublish: settings?.minRatingToPublish ?? 4,
   });
 
-  const now = new Date();
+  const now = nowInstant();
   const reviewerName = buildReviewerName(firstName, input.lastName);
 
   const review = await db.orm.public.Review.create({

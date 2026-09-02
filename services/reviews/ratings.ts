@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { enqueueProductRatingSync } from "@/lib/queue";
 import { loadOfflineSessionByShopId } from "@/services/shop/service";
 import { getProductById } from "@/services/products/repository";
@@ -109,7 +109,7 @@ export async function syncProductRatingMetafields(productId: string) {
   });
 
   await getDb().orm.public.Product.where({ id: productId }).update({
-    lastSyncedAt: new Date(),
+    lastSyncedAt: nowInstant(),
   });
 
   return ratings;

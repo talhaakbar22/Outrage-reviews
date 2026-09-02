@@ -55,6 +55,52 @@ const PRODUCTS_QUERY = `#graphql
   }
 `;
 
+const PRODUCT_BY_ID_QUERY = `#graphql
+  query ProductById($id: ID!) {
+    product(id: $id) {
+      id
+      title
+      handle
+      status
+      featuredImage {
+        url
+      }
+      averageRating: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.rating}"
+      ) {
+        value
+      }
+      reviewCount: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.count}"
+      ) {
+        value
+      }
+    }
+  }
+`;
+
+export function shopifyProductGid(shopifyProductId: string) {
+  return `gid://shopify/Product/${shopifyProductId}`;
+}
+
+export async function fetchProductByShopifyId(
+  session: Session,
+  shopifyProductId: string,
+): Promise<ShopifyProductNode | null> {
+  const client = createGraphqlClient(session);
+  const response = await client.request<{
+    product: ShopifyProductNode | null;
+  }>(PRODUCT_BY_ID_QUERY, {
+    variables: {
+      id: shopifyProductGid(shopifyProductId),
+    },
+  });
+
+  return response.data?.product ?? null;
+}
+
 export async function fetchProductsPage(
   session: Session,
   cursor?: string | null,

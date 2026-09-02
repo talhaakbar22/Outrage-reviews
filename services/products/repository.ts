@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, toInstant, type DbInstant } from "@/lib/prisma";
 
 export type ProductUpsertInput = {
   shopifyProductId: string;
@@ -6,7 +6,7 @@ export type ProductUpsertInput = {
   handle: string | null;
   imageUrl: string | null;
   status: "active" | "archived" | "draft";
-  lastSyncedAt: Date;
+  lastSyncedAt: Date | DbInstant;
   avgRating?: number | null;
   reviewCount?: number;
 };
@@ -23,7 +23,7 @@ export async function upsertProduct(shopId: string, input: ProductUpsertInput) {
     handle: input.handle,
     imageUrl: input.imageUrl,
     status: input.status,
-    lastSyncedAt: input.lastSyncedAt,
+    lastSyncedAt: toInstant(input.lastSyncedAt),
     avgRating:
       input.avgRating !== undefined
         ? input.avgRating

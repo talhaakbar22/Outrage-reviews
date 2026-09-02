@@ -1,5 +1,5 @@
 import type { Session } from "@shopify/shopify-api";
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import {
   resolveProductId,
   upsertProduct,
@@ -66,7 +66,7 @@ export class ShopifySyncService {
     let cursor: string | null = null;
     let hasNextPage = true;
     let productsSynced = 0;
-    const syncedAt = new Date();
+    const syncedAt = nowInstant();
 
     while (hasNextPage) {
       const page = await fetchProductsPage(this.session, cursor);
