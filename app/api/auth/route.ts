@@ -4,7 +4,6 @@ import { loadOfflineSession } from "@/services/shop/service";
 
 export async function GET(request: NextRequest) {
   const shopParam = request.nextUrl.searchParams.get("shop");
-  console.log("shopParam", shopParam);
 
   if (!shopParam) {
     return NextResponse.json(
@@ -17,9 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const shop = normalizeShopDomain(shopParam);
-  console.log("shop", shop);
   const existingSession = await loadOfflineSession(shop);
-  console.log("existingSession", existingSession);
 
   if (existingSession?.accessToken && existingSession.isActive(undefined)) {
     const dashboard = new URL("/dashboard", request.nextUrl.origin);
