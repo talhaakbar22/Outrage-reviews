@@ -96,6 +96,7 @@ export function WidgetsWorkspace({
         shopDomain: shop,
         shopifyApiKey,
         block: "customer-say",
+        target: "newAppsSection",
       }),
     [shop, shopifyApiKey],
   );
@@ -108,21 +109,19 @@ export function WidgetsWorkspace({
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900/90 dark:text-amber-100/90">
           Outrage Reviews widgets are <strong>theme blocks</strong> on the product
-          page — not <strong>App embeds</strong>. If you open the App embeds tab
-          and see “You don&apos;t have any apps with embeds installed”, that is
-          expected. You must also deploy the extension once with Shopify CLI so
-          blocks appear under <strong>Add block → Apps</strong>.
+          page — not <strong>App embeds</strong>. If &quot;customer-say not added&quot;
+          appears, the theme extension has not been pushed to Shopify yet.{" "}
+          <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">yarn dev</code>{" "}
+          and ngrok alone are not enough — run Shopify CLI to upload blocks.
         </p>
         <code className="mt-3 block rounded-lg bg-white/80 px-3 py-2 text-xs text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
-          shopify app deploy
+          yarn shopify:dev
         </code>
         <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/80">
-          For local development, run{" "}
+          Using your own ngrok tunnel:{" "}
           <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">
-            shopify app dev
-          </code>{" "}
-          in a second terminal alongside{" "}
-          <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">yarn dev</code>.
+            shopify app dev --tunnel-url=https://YOUR-SUBDOMAIN.ngrok-free.app:443
+          </code>
         </p>
       </div>
 
@@ -324,7 +323,7 @@ export function WidgetsWorkspace({
                 rel="noreferrer"
                 className="btn-primary"
               >
-                Add “What customers say” to product page
+                Add “What customers say” section
               </a>
               <a
                 href={productTemplateUrl}
@@ -337,9 +336,14 @@ export function WidgetsWorkspace({
             </div>
 
             <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-              Manual path: Theme editor → Product page → select a section (e.g.{" "}
-              <em>Product information</em>) → <strong>Add block</strong> →{" "}
-              <strong>Apps</strong> → <strong>What customers say</strong>.
+              Manual path: Theme editor → Product page → <strong>Add section</strong> →{" "}
+              <strong>Apps</strong> → <strong>What customers say</strong>. Drag the
+              section where you want it (usually below product details).
+            </p>
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
+              If you see a JSON error, open the block settings and clear{" "}
+              <strong>Direct app URL</strong> — leave it blank so data loads via app
+              proxy.
             </p>
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
               Data loads from{" "}

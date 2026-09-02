@@ -6,7 +6,7 @@
 client_id = "a8568adbcd8de4fde3d72f2a77cd5172"
 name = "Outrage Reviews"
 application_url = "http://localhost:3000"
-embedded = false
+embedded = true
 
 [build]
 automatically_update_urls_on_dev = true

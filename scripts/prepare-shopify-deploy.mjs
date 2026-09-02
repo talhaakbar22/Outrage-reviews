@@ -74,11 +74,15 @@ writeFileSync(tomlPath, patchedToml);
 
 console.log(`Using application_url=${rawAppUrl} for deploy…`);
 
-const result = spawnSync("shopify", ["app", "deploy"], {
-  cwd: root,
-  stdio: "inherit",
-  env: process.env,
-});
+const result = spawnSync(
+  "shopify",
+  ["app", "deploy", "--allow-updates"],
+  {
+    cwd: root,
+    stdio: "inherit",
+    env: process.env,
+  },
+);
 
 writeFileSync(tomlPath, originalToml);
 

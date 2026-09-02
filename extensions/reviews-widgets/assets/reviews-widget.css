@@ -240,6 +240,12 @@
   padding: 1.5rem 0;
 }
 
+.or-customer-say--placeholder .or-customer-say__text {
+  color: var(--or-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
 .or-customer-say__shell {
   border: 1px solid var(--or-border);
   border-radius: 1rem;

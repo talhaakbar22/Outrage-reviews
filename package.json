@@ -18,7 +18,7 @@
     "worker:email": "tsx --import dotenv/config workers/review-email.worker.ts",
     "worker:media": "tsx --import dotenv/config workers/media.worker.ts",
     "worker:ratings": "tsx --import dotenv/config workers/shopify-ratings.worker.ts",
-    "shopify:dev": "shopify app dev",
+    "shopify:dev": "node scripts/shopify-dev.mjs",
     "shopify:deploy": "node scripts/prepare-shopify-deploy.mjs"
   },
   "dependencies": {

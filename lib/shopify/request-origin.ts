@@ -1,15 +1,24 @@
 import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 
+function firstHeaderValue(value: string | null): string | undefined {
+  return value?.split(",")[0]?.trim() || undefined;
+}
+
+function isLoopbackHost(host: string): boolean {
+  const hostname = host.split(":")[0].replace(/^\[|\]$/g, "").toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 /**
  * Resolve the public app URL for the current request.
- * Prefer proxy headers (nginx / load balancer) so OAuth redirect_uri matches
- * what the browser actually uses.
+ * Prefer proxy/tunnel headers (nginx, ngrok, load balancer) so redirects and
+ * OAuth redirect_uri match what the browser actually uses.
  */
 export function resolveRequestAppUrl(request: NextRequest): URL {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  const host = forwardedHost ?? request.headers.get("host");
+  const forwardedHost = firstHeaderValue(request.headers.get("x-forwarded-host"));
+  const forwardedProto = firstHeaderValue(request.headers.get("x-forwarded-proto"));
+  const host = forwardedHost ?? firstHeaderValue(request.headers.get("host"));
 
   if (host) {
     const protocol =
@@ -17,7 +26,22 @@ export function resolveRequestAppUrl(request: NextRequest): URL {
       (request.nextUrl.protocol
         ? request.nextUrl.protocol.replace(":", "")
         : "https");
-    return new URL(`${protocol}://${host}`);
+    const fromRequest = new URL(`${protocol}://${host}`);
+
+    // ngrok forwards to upstream with Host: localhost:3000; SHOPIFY_APP_URL
+    // should be the public https://….ngrok-free.app URL in that setup.
+    if (isLoopbackHost(host)) {
+      try {
+        const fromEnv = env.appUrl();
+        if (isSecureAppUrl(fromEnv) && !isLoopbackHost(fromEnv.host)) {
+          return fromEnv;
+        }
+      } catch {
+        // SHOPIFY_APP_URL not configured
+      }
+    }
+
+    return fromRequest;
   }
 
   return env.appUrl();

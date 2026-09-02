@@ -38,11 +38,12 @@
     Object.keys(params || {}).forEach(function (key) {
       url.searchParams.set(key, String(params[key]));
     });
+    var shop =
+      window.Shopify && window.Shopify.shop
+        ? window.Shopify.shop
+        : window.location.hostname;
     if (url.pathname.indexOf("/apps/") === -1) {
-      url.searchParams.set(
-        "shop",
-        window.Shopify && window.Shopify.shop ? window.Shopify.shop : window.location.hostname,
-      );
+      url.searchParams.set("shop", shop);
     }
     return url.toString();
   }
@@ -140,7 +141,20 @@
     var response = await fetch(buildEndpoint(endpoint, productId, params), {
       headers: { Accept: "application/json" },
     });
-    var data = await response.json();
+    var raw = await response.text();
+    var data;
+
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+      if (/^You are about to visit/i.test(raw)) {
+        throw new Error(
+          "Ngrok browser warning blocked the request. Clear “App URL” in the block settings and use the app proxy instead.",
+        );
+      }
+      throw new Error("App returned invalid JSON. Check that the app is running and app proxy is configured.");
+    }
+
     if (!response.ok) {
       throw new Error(data.error || "Failed to load customer summary");
     }

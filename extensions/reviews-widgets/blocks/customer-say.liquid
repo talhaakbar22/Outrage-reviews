@@ -4,7 +4,7 @@
 {% endcomment %}
 
 {% liquid
-  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_product = block.settings.product | default: product
   assign rating_value = 0
   assign review_count = 0
 
@@ -71,6 +71,15 @@
       </div>
     </div>
   </section>
+{% else %}
+  <section class="or-customer-say or-customer-say--placeholder" {{ block.shopify_attributes }}>
+    <div class="or-customer-say__shell">
+      <p class="or-customer-say__heading">What customers say</p>
+      <p class="or-customer-say__text">
+        Add this block on a product page template, or pick a product in the block settings.
+      </p>
+    </div>
+  </section>
 {% endif %}
 
 {% schema %}
@@ -84,7 +93,8 @@
     {
       "type": "product",
       "id": "product",
-      "label": "Product"
+      "label": "Product",
+      "autofill": true
     },
     {
       "type": "range",
@@ -104,8 +114,8 @@
     {
       "type": "text",
       "id": "api_base_url",
-      "label": "App URL (optional)",
-      "info": "Leave blank to use the Shopify app proxy (/apps/outrage-reviews)."
+      "label": "Direct app URL (advanced)",
+      "info": "Leave blank. Uses /apps/outrage-reviews/customer-say via app proxy. Do not paste ngrok URLs here."
     }
   ]
 }
