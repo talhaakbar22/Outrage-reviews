@@ -255,6 +255,35 @@
   background: #fff;
 }
 
+.or-customer-say__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.or-customer-say__write-review {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #18181b;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #18181b;
+  text-decoration: none;
+  background: #fff;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.or-customer-say__write-review:hover {
+  background: #18181b;
+  color: #fff;
+}
+
 .or-customer-say__hero {
   display: grid;
   gap: 1.25rem;

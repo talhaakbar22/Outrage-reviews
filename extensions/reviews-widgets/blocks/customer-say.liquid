@@ -22,6 +22,15 @@
   else
     assign summary_endpoint = '/apps/outrage-reviews/customer-say'
   endif
+
+  assign write_review_href = blank
+  if rating_product
+    if block.settings.write_review_url != blank
+      assign write_review_href = block.settings.write_review_url
+    else
+      assign write_review_href = '/apps/outrage-reviews/write-review?product_id=' | append: rating_product.id
+    endif
+  endif
 %}
 
 {% if rating_product %}
@@ -34,6 +43,14 @@
     {{ block.shopify_attributes }}
   >
     <div class="or-customer-say__shell">
+      {% if block.settings.show_write_review and write_review_href != blank %}
+        <div class="or-customer-say__topbar">
+          <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
+            {{ block.settings.write_review_label }}
+          </a>
+        </div>
+      {% endif %}
+
       <div class="or-customer-say__hero">
         <div class="or-customer-say__score">
           <p class="or-customer-say__average" data-outrage-average>
@@ -46,7 +63,6 @@
         </div>
 
         <div class="or-customer-say__summary">
-          <p class="or-customer-say__heading">What customers say</p>
           <p class="or-customer-say__text" data-outrage-summary-text>
             Loading customer summary…
           </p>
@@ -74,9 +90,8 @@
 {% else %}
   <section class="or-customer-say or-customer-say--placeholder" {{ block.shopify_attributes }}>
     <div class="or-customer-say__shell">
-      <p class="or-customer-say__heading">What customers say</p>
       <p class="or-customer-say__text">
-        Add this block on a product page template, or pick a product in the block settings.
+        Add this section on a product page template, or pick a product in the block settings.
       </p>
     </div>
   </section>
@@ -110,6 +125,24 @@
       "id": "star_color",
       "label": "Star color",
       "default": "#F5A623"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_write_review",
+      "label": "Show “Write a review” button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "write_review_label",
+      "label": "Write review button label",
+      "default": "Write a review"
+    },
+    {
+      "type": "url",
+      "id": "write_review_url",
+      "label": "Write review link (optional)",
+      "info": "Leave blank to use the Outrage Reviews write-review page for this product."
     },
     {
       "type": "text",

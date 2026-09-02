@@ -341,7 +341,12 @@ export function WidgetsWorkspace({
               section where you want it (usually below product details).
             </p>
             <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
-              If you see a JSON error, open the block settings and clear{" "}
+              Seeing two widgets? You added it twice — once as a <strong>block</strong> inside
+              Product information and once as a <strong>section</strong>. Delete the block
+              inside Product information and keep only the full-width section at the bottom.
+            </p>
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
+              If you see a JSON/ngrok error, open the widget settings and clear{" "}
               <strong>Direct app URL</strong> — leave it blank so data loads via app
               proxy.
             </p>

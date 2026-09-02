@@ -77,9 +77,14 @@ export function CustomerSayWidgetPreview({
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-950 dark:text-zinc-50">
-              What customers say
-            </p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="shrink-0 rounded-full border border-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
+              >
+                Write a review
+              </button>
+            </div>
             <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">
               {data.summaryText}
             </p>
