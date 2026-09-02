@@ -77,3 +77,90 @@ export function toInstant(value: Date | DbInstant): DbInstant {
     ? value
     : Temporal.Instant.fromEpochMilliseconds(value.getTime());
 }
+
+export function instantEpochMs(
+  value: DbInstant | Date | null | undefined,
+): number | null {
+  if (value == null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (value instanceof Temporal.Instant) {
+    return Number(value.epochMilliseconds);
+  }
+
+  if (typeof value === "object" && "epochMilliseconds" in value) {
+    const epochMilliseconds = (value as { epochMilliseconds: unknown })
+      .epochMilliseconds;
+    return typeof epochMilliseconds === "number" ? epochMilliseconds : null;
+  }
+
+  return null;
+}
+
+export function isBefore(
+  left: DbInstant | Date | null | undefined,
+  right: DbInstant | Date | null | undefined,
+): boolean {
+  const leftMs = instantEpochMs(left);
+  const rightMs = instantEpochMs(right);
+  if (leftMs == null || rightMs == null) {
+    return false;
+  }
+  return leftMs < rightMs;
+}
+
+export function addDays(instant: DbInstant, days: number): DbInstant {
+  return instant.add({ days });
+}
+
+export function toIsoString(
+  value: DbInstant | Date | string | null | undefined,
+): string | null {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (value instanceof Temporal.Instant) {
+    return value.toString();
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "epochMilliseconds" in value
+  ) {
+    const epochMilliseconds = (value as { epochMilliseconds: unknown })
+      .epochMilliseconds;
+    if (typeof epochMilliseconds === "number") {
+      return Temporal.Instant.fromEpochMilliseconds(epochMilliseconds).toString();
+    }
+  }
+
+  return String(value);
+}
+
+export function formatDbInstant(
+  value: DbInstant | Date | string | null | undefined,
+  locales?: Intl.LocalesArgument,
+  options?: Intl.DateTimeFormatOptions,
+): string {
+  const iso = toIsoString(value);
+  if (!iso) {
+    return "";
+  }
+
+  return new Date(iso).toLocaleString(locales ?? "en-US", options);
+}

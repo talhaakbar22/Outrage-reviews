@@ -1,4 +1,4 @@
-import { getDb, nowInstant } from "@/lib/prisma";
+import { getDb, nowInstant, toInstant } from "@/lib/prisma";
 import { upsertProduct } from "@/services/products/repository";
 import { markShopUninstalled } from "@/services/shop/service";
 import { WEBHOOK_TOPICS } from "@/services/webhooks/topics";
@@ -45,13 +45,13 @@ export async function processWebhookEvent(eventId: string) {
 
     await db.orm.public.WebhookEvent.where({ id: event.id }).update({
       status: "processed",
-      processedAt: new Date(),
+      processedAt: nowInstant(),
       errorMessage: null,
     });
   } catch (error) {
     await db.orm.public.WebhookEvent.where({ id: event.id }).update({
       status: "failed",
-      processedAt: new Date(),
+      processedAt: nowInstant(),
       errorMessage:
         error instanceof Error ? error.message : "Webhook processing failed",
     });
@@ -191,7 +191,7 @@ async function handleFulfillmentEvent(shopId: string, payload: unknown) {
   }
 
   await db.orm.public.Order.where({ id: order.id }).update({
-    deliveredAt: parseDate(fulfillmentEvent.happenedAt) ?? new Date(),
+    deliveredAt: toInstant(parseDate(fulfillmentEvent.happenedAt) ?? new Date()),
     fulfillmentStatus: "delivered",
   });
 

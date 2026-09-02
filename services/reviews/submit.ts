@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { enqueueMediaProcessing } from "@/lib/queue";
 import {
   loadReviewRequestContext,
@@ -74,7 +74,7 @@ export async function submitReviewFromToken(
     minRatingToPublish: settings?.minRatingToPublish ?? 4,
   });
 
-  const now = new Date();
+  const now = nowInstant();
   const reviewerName =
     input.reviewerName?.trim() ||
     context.customerName ||

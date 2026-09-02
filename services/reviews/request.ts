@@ -1,4 +1,9 @@
-import { getDb } from "@/lib/prisma";
+import {
+  addDays,
+  getDb,
+  isBefore,
+  nowInstant,
+} from "@/lib/prisma";
 import {
   generateReviewToken,
   hashReviewToken,
@@ -44,10 +49,8 @@ export class ReviewRequestError extends Error {
   }
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
+function addDaysFromNow(days: number) {
+  return addDays(nowInstant(), days);
 }
 
 export async function createReviewRequestForLineItem(input: {
@@ -78,7 +81,6 @@ export async function createReviewRequestForLineItem(input: {
     return null;
   }
 
-  const now = new Date();
   const { rawToken, tokenHash } = generateReviewToken();
 
   const request = await db.orm.public.ReviewRequest.create({
@@ -90,8 +92,8 @@ export async function createReviewRequestForLineItem(input: {
     email: input.email,
     tokenHash,
     status: "pending",
-    scheduledAt: addDays(now, input.requestDelayDays),
-    expiresAt: addDays(now, input.expiryDays ?? 90),
+    scheduledAt: addDaysFromNow(input.requestDelayDays),
+    expiresAt: addDaysFromNow(input.expiryDays ?? 90),
   });
 
   if (!request) {
@@ -132,8 +134,8 @@ export async function loadReviewRequestContext(
     throw new ReviewRequestError("This review link has expired.", "expired");
   }
 
-  const now = new Date();
-  if (request.expiresAt && request.expiresAt.getTime() < now.getTime()) {
+  const now = nowInstant();
+  if (request.expiresAt && isBefore(request.expiresAt, now)) {
     await getDb().orm.public.ReviewRequest.where({ id: request.id }).update({
       status: "expired",
     });
@@ -143,7 +145,7 @@ export async function loadReviewRequestContext(
   if (
     !request.sentAt &&
     request.scheduledAt &&
-    request.scheduledAt.getTime() > now.getTime()
+    isBefore(now, request.scheduledAt)
   ) {
     throw new ReviewRequestError(
       "This review request is not ready yet. Please check your email again later.",
@@ -225,7 +227,7 @@ export async function markReviewRequestCompleted(requestId: string) {
   const db = getDb();
   await db.orm.public.ReviewRequest.where({ id: requestId }).update({
     status: "completed",
-    completedAt: new Date(),
+    completedAt: nowInstant(),
   });
 
   const { cancelReviewEmailJobs } = await import("@/lib/queue");

@@ -14,6 +14,21 @@ export function formatRating(value: number) {
   return value.toFixed(1);
 }
 
+const REVIEW_DATE_LOCALE = "en-US";
+
+export function formatReviewDate(iso: string) {
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) {
+    return iso;
+  }
+
+  return new Date(parsed).toLocaleDateString(REVIEW_DATE_LOCALE, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     pending:

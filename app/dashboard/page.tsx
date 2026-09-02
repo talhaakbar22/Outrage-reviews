@@ -3,6 +3,7 @@ import {
   requireDashboardShop,
   withShopPath,
 } from "@/lib/dashboard/shop-context";
+import { toReviewCardData } from "@/components/dashboard/review-card-data";
 import { getDashboardStats } from "@/services/reviews/moderation";
 import { ReviewModerationCard } from "@/components/dashboard/review-moderation-card";
 import { formatRating } from "@/components/dashboard/review-ui";
@@ -70,10 +71,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               {stats.recentReviews.map((review) => (
                 <ReviewModerationCard
                   key={review.id}
-                  review={{
-                    ...review,
-                    createdAt: review.createdAt?.toISOString(),
-                  }}
+                  review={toReviewCardData(review)}
                   detailHref={withShopPath(
                     `/dashboard/reviews/${review.id}`,
                     query,

@@ -1,5 +1,5 @@
 import type { Session } from "@shopify/shopify-api";
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { parseLooxCsv } from "@/services/import/loox/parser";
 import type { LooxImportProgress, LooxImportSummary } from "@/services/import/loox/types";
 import { downloadReviewImage } from "@/services/media/storage";
@@ -44,7 +44,7 @@ export async function runLooxImport(input: {
 
   await updateSyncJob(input.syncJobId, {
     status: "running",
-    startedAt: new Date(),
+    startedAt: nowInstant(),
     payload: { phase: "import", ...progress },
   });
 
@@ -145,7 +145,7 @@ export async function runLooxImport(input: {
 
     await updateSyncJob(input.syncJobId, {
       status: "completed",
-      completedAt: new Date(),
+      completedAt: nowInstant(),
       payload: { phase: "complete", ...summary },
     });
 
@@ -153,7 +153,7 @@ export async function runLooxImport(input: {
   } catch (error) {
     await updateSyncJob(input.syncJobId, {
       status: "failed",
-      completedAt: new Date(),
+      completedAt: nowInstant(),
       errorMessage: error instanceof Error ? error.message : "Loox import failed",
       payload: { phase: "failed", ...progress },
     });

@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, toIsoString } from "@/lib/prisma";
 
 export type StorefrontReview = {
   id: string;
@@ -81,8 +81,8 @@ export async function listPublishedReviewsForShopifyProduct(input: {
         body: review.body,
         reviewerName: review.reviewerName,
         isVerifiedPurchase: review.isVerifiedPurchase,
-        publishedAt: review.publishedAt?.toISOString() ?? null,
-        createdAt: review.createdAt.toISOString(),
+        publishedAt: toIsoString(review.publishedAt),
+        createdAt: toIsoString(review.createdAt) ?? "",
         media: [...review.media]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((item) => ({

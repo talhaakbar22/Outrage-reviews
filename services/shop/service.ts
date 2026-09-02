@@ -1,5 +1,5 @@
 import type { Session } from "@shopify/shopify-api";
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant } from "@/lib/prisma";
 import { fetchShopInfo } from "@/lib/shopify/webhooks";
 
 export async function persistShopInstall(session: Session) {
@@ -124,6 +124,6 @@ export async function markShopUninstalled(shopDomain: string) {
   }
 
   await db.orm.public.Shop.where({ id: shop.id }).update({
-    uninstalledAt: new Date(),
+    uninstalledAt: nowInstant(),
   });
 }

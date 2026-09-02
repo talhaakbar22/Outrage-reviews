@@ -28,7 +28,7 @@ export class ShopifySyncService {
       shopId,
       type: "full_sync",
       status: "running",
-      startedAt: new Date(),
+      startedAt: nowInstant(),
       payload: { phase: "products" },
     });
 
@@ -46,7 +46,7 @@ export class ShopifySyncService {
 
       await db.orm.public.SyncJob.where({ id: job.id }).update({
         status: "completed",
-        completedAt: new Date(),
+        completedAt: nowInstant(),
         payload: { phase: "complete", ...summary },
       });
 
@@ -54,7 +54,7 @@ export class ShopifySyncService {
     } catch (error) {
       await db.orm.public.SyncJob.where({ id: job.id }).update({
         status: "failed",
-        completedAt: new Date(),
+        completedAt: nowInstant(),
         errorMessage:
           error instanceof Error ? error.message : "Unknown sync error",
       });

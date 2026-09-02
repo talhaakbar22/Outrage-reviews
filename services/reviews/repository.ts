@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant, toInstant } from "@/lib/prisma";
 
 export type CreateImportedReviewInput = {
   shopId: string;
@@ -42,10 +42,12 @@ export async function createImportedReview(input: CreateImportedReviewInput) {
     isVerifiedPurchase: input.isVerifiedPurchase,
     source: "import",
     status: input.status,
-    publishedAt: input.publishedAt,
+    publishedAt: input.publishedAt ? toInstant(input.publishedAt) : null,
     merchantReply: input.merchantReply,
-    merchantRepliedAt: input.merchantRepliedAt,
-    createdAt: input.createdAt,
+    merchantRepliedAt: input.merchantRepliedAt
+      ? toInstant(input.merchantRepliedAt)
+      : null,
+    createdAt: toInstant(input.createdAt),
   });
 
   if (!review) {

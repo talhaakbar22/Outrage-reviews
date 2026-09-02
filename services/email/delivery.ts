@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, isBefore, nowInstant } from "@/lib/prisma";
 import { buildReviewRequestUrl } from "@/lib/review-token";
 import {
   enqueueReviewReminder,
@@ -23,8 +23,8 @@ async function loadEmailContext(requestId: string, rawToken: string) {
     return { skip: true as const, reason: `status_${request.status}` };
   }
 
-  const now = new Date();
-  if (request.expiresAt && request.expiresAt.getTime() < now.getTime()) {
+  const now = nowInstant();
+  if (request.expiresAt && isBefore(request.expiresAt, now)) {
     await db.orm.public.ReviewRequest.where({ id: request.id }).update({
       status: "expired",
     });
@@ -104,7 +104,7 @@ export async function sendReviewRequestEmail(input: {
     kind: "request" satisfies ReviewEmailKind,
   });
 
-  const now = new Date();
+  const now = nowInstant();
   await getDb().orm.public.ReviewRequest.where({ id: context.request.id }).update({
     status: "sent",
     sentAt: now,
@@ -157,7 +157,7 @@ export async function sendReviewReminderEmail(input: {
   });
 
   await getDb().orm.public.ReviewRequest.where({ id: context.request.id }).update({
-    remindedAt: new Date(),
+    remindedAt: nowInstant(),
   });
 
   return { sent: true as const };

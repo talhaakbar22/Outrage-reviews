@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { StarRating, StatusBadge } from "@/components/dashboard/review-ui";
+import { formatReviewDate, StarRating, StatusBadge } from "@/components/dashboard/review-ui";
 
 export type ReviewCardData = {
   id: string;
@@ -15,7 +15,7 @@ export type ReviewCardData = {
   reviewerName: string | null;
   product: { title: string };
   media: Array<{ id: string; url: string; thumbnailUrl: string | null }>;
-  createdAt: string | Date;
+  createdAt: string;
 };
 
 export function ReviewModerationCard({
@@ -117,8 +117,7 @@ export function ReviewModerationCard({
       </p>
 
       <p className="mt-3 text-xs text-zinc-500">
-        {review.reviewerName || "Customer"} ·{" "}
-        {new Date(review.createdAt).toLocaleDateString()}
+        {review.reviewerName || "Customer"} · {formatReviewDate(review.createdAt)}
         {review.media.length > 0 ? ` · ${review.media.length} photo(s)` : ""}
       </p>
 

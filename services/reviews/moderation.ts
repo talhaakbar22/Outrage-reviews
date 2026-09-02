@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, instantEpochMs, nowInstant } from "@/lib/prisma";
 import { publishProductRatings } from "@/services/reviews/ratings";
 
 export type ReviewListFilters = {
@@ -97,7 +97,9 @@ function mapReview(row: {
     ...row,
     media: [...row.media].sort((a, b) => a.sortOrder - b.sortOrder),
     replies: [...row.replies].sort(
-      (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime(),
+      (a, b) =>
+        (instantEpochMs(b.publishedAt) ?? 0) -
+        (instantEpochMs(a.publishedAt) ?? 0),
     ),
   };
 }
@@ -369,7 +371,7 @@ export async function approveReview(shopId: string, reviewId: string) {
 
   const updated = await db.orm.public.Review.where({ id: reviewId }).update({
     status: "published",
-    publishedAt: review.publishedAt ?? new Date(),
+    publishedAt: review.publishedAt ?? nowInstant(),
   });
 
   await publishProductRatings(review.productId);
@@ -430,7 +432,7 @@ export async function replyToReview(input: {
     throw new Error("Review not found");
   }
 
-  const now = new Date();
+  const now = nowInstant();
   const authorName = input.authorName?.trim() || "Store team";
 
   await db.orm.public.ReviewReply.create({

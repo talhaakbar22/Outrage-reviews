@@ -5,6 +5,8 @@ import {
   requireDashboardShop,
   withShopPath,
 } from "@/lib/dashboard/shop-context";
+import { toReviewCardData } from "@/components/dashboard/review-card-data";
+import { formatDbInstant } from "@/lib/prisma";
 import { getDashboardReview } from "@/services/reviews/moderation";
 import { ReviewModerationCard } from "@/components/dashboard/review-moderation-card";
 import { StarRating, StatusBadge } from "@/components/dashboard/review-ui";
@@ -54,7 +56,7 @@ export default async function ReviewDetailPage({
           <p className="mt-2 text-sm text-zinc-500">
             {review.reviewerName || "Customer"}
             {review.reviewerEmail ? ` · ${review.reviewerEmail}` : ""} ·{" "}
-            {review.createdAt.toLocaleString()} · source {review.source}
+            {formatDbInstant(review.createdAt)} · source {review.source}
           </p>
 
           <p className="mt-6 whitespace-pre-wrap text-base leading-7 text-zinc-800 dark:text-zinc-200">
@@ -97,7 +99,7 @@ export default async function ReviewDetailPage({
                     {reply.body}
                   </p>
                   <p className="mt-2 text-xs text-zinc-500">
-                    {reply.publishedAt.toLocaleString()}
+                    {formatDbInstant(reply.publishedAt)}
                   </p>
                 </div>
               ))}
@@ -115,10 +117,7 @@ export default async function ReviewDetailPage({
 
           <Suspense fallback={null}>
             <ReviewModerationCard
-              review={{
-                ...review,
-                createdAt: review.createdAt.toISOString(),
-              }}
+              review={toReviewCardData(review)}
               detailHref={withShopPath(`/dashboard/reviews/${review.id}`, query)}
             />
           </Suspense>

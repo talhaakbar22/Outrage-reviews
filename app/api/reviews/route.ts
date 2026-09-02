@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiShop } from "@/lib/dashboard/shop-context";
+import { toIsoString } from "@/lib/prisma";
 import {
   bulkSetReviewStatus,
   listManageReviews,
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
   const payload: Record<string, unknown> = {
     reviews: result.reviews.map((review) => ({
       ...review,
-      createdAt: review.createdAt.toISOString(),
-      publishedAt: review.publishedAt?.toISOString() ?? null,
-      merchantRepliedAt: review.merchantRepliedAt?.toISOString() ?? null,
+      createdAt: toIsoString(review.createdAt) ?? "",
+      publishedAt: toIsoString(review.publishedAt),
+      merchantRepliedAt: toIsoString(review.merchantRepliedAt),
       replies: review.replies.map((reply) => ({
         ...reply,
-        publishedAt: reply.publishedAt.toISOString(),
+        publishedAt: toIsoString(reply.publishedAt) ?? "",
       })),
     })),
     total: result.total,

@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, nowInstant, toIsoString } from "@/lib/prisma";
 import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
 
 export type SummaryHighlight = {
@@ -182,7 +182,7 @@ export async function buildCustomerSayPayload(input: {
     product.title,
   );
   const summarySourceCount = Math.min(sourceReviews.length, SUMMARY_SOURCE_LIMIT);
-  const generatedAt = new Date();
+  const generatedAt = nowInstant();
 
   const snippetCandidates = sourceReviews
     .filter((review) => review.body && review.rating >= 4)
@@ -221,8 +221,8 @@ export async function buildCustomerSayPayload(input: {
       body: review.body,
       reviewerName: review.reviewerName,
       isVerifiedPurchase: review.isVerifiedPurchase,
-      publishedAt: review.publishedAt?.toISOString() ?? null,
-      createdAt: review.createdAt.toISOString(),
+      publishedAt: toIsoString(review.publishedAt),
+      createdAt: toIsoString(review.createdAt) ?? "",
     }));
 
     reviewsTotal = product.reviewCount;
@@ -266,8 +266,8 @@ export async function buildCustomerSayPayload(input: {
     verifiedCount,
     summaryText,
     summarySourceCount,
-    summaryGeneratedAt: generatedAt.toISOString(),
-    summaryMonthLabel: formatSummaryMonth(generatedAt),
+    summaryGeneratedAt: toIsoString(generatedAt) ?? "",
+    summaryMonthLabel: formatSummaryMonth(new Date(toIsoString(generatedAt) ?? "")),
     highlights,
     snippets,
     reviews,
@@ -286,7 +286,7 @@ export function emptyPayload(
     CustomerSayPayload & { summaryMonthLabel: string }
   > = {},
 ): CustomerSayPayload & { summaryMonthLabel: string } {
-  const generatedAt = new Date();
+  const generatedAt = nowInstant();
   return {
     productId: null,
     productTitle: null,
@@ -296,8 +296,8 @@ export function emptyPayload(
     summaryText:
       "No published reviews yet. Once customers start leaving feedback, a summary will appear here.",
     summarySourceCount: 0,
-    summaryGeneratedAt: generatedAt.toISOString(),
-    summaryMonthLabel: formatSummaryMonth(generatedAt),
+    summaryGeneratedAt: toIsoString(generatedAt) ?? "",
+    summaryMonthLabel: formatSummaryMonth(new Date(toIsoString(generatedAt) ?? "")),
     highlights: [],
     snippets: [],
     reviews: [],
@@ -323,7 +323,7 @@ export function normalizeCustomerSayPayload(
       reviewerName: review.reviewerName,
       isVerifiedPurchase: review.isVerifiedPurchase,
       publishedAt: review.publishedAt ?? null,
-      createdAt: review.createdAt ?? new Date().toISOString(),
+      createdAt: toIsoString(review.createdAt) ?? new Date().toISOString(),
     })),
   };
 }

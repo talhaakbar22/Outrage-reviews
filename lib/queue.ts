@@ -119,7 +119,7 @@ export async function enqueueLooxImport(input: {
   await getLooxImportQueue().add(
     "import",
     input,
-    { jobId: `loox-import:${input.syncJobId}` },
+    { jobId: `loox-import-${input.syncJobId}` },
   );
 }
 
@@ -156,7 +156,7 @@ export async function enqueueMediaProcessing(input: MediaProcessingJobData) {
   await getMediaQueue().add(
     "process",
     input,
-    { jobId: `review-media:${input.reviewMediaId}` },
+    { jobId: `review-media-${input.reviewMediaId}` },
   );
 }
 
@@ -179,7 +179,7 @@ export async function enqueueInitialSync(shopId: string) {
   await getSyncQueue().add(
     "initial",
     { shopId },
-    { jobId: `initial-sync:${shopId}` },
+    { jobId: `initial-sync-${shopId}` },
   );
 }
 
@@ -233,11 +233,11 @@ export function getAiSummaryQueue() {
 }
 
 export function reviewRequestJobId(requestId: string) {
-  return `review-request:${requestId}`;
+  return `review-request-${requestId}`;
 }
 
 export function reviewReminderJobId(requestId: string) {
-  return `review-reminder:${requestId}`;
+  return `review-reminder-${requestId}`;
 }
 
 export async function enqueueReviewRequest(input: {
@@ -350,7 +350,7 @@ export function getShopifyRatingsQueue() {
 }
 
 export function shopifyRatingsJobId(productId: string) {
-  return `shopify-ratings:${productId}`;
+  return `shopify-ratings-${productId}`;
 }
 
 /**
