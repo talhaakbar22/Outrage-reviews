@@ -19,17 +19,24 @@
 
   if block.settings.api_base_url != blank
     assign summary_endpoint = block.settings.api_base_url | append: '/api/storefront/customer-say'
+    assign submit_endpoint = block.settings.api_base_url | append: '/api/storefront/submit-review'
+    assign media_endpoint = block.settings.api_base_url | append: '/api/storefront/review-media'
   else
     assign summary_endpoint = '/apps/outrage-reviews/customer-say'
+    assign submit_endpoint = '/apps/outrage-reviews/submit-review'
+    assign media_endpoint = '/apps/outrage-reviews/review-media'
   endif
 
   assign write_review_href = blank
   if rating_product
     if block.settings.write_review_url != blank
       assign write_review_href = block.settings.write_review_url
-    else
-      assign write_review_href = '/apps/outrage-reviews/write-review?product_id=' | append: rating_product.id
     endif
+  endif
+
+  assign product_image = blank
+  if rating_product and rating_product.featured_image
+    assign product_image = rating_product.featured_image | image_url: width: 160
   endif
 %}
 
@@ -38,16 +45,26 @@
     class="or-customer-say"
     data-outrage-customer-say
     data-product-id="{{ rating_product.id }}"
+    data-product-title="{{ rating_product.title | escape }}"
+    data-product-image="{{ product_image | escape }}"
     data-endpoint="{{ summary_endpoint | escape }}"
+    data-submit-endpoint="{{ submit_endpoint | escape }}"
+    data-media-endpoint="{{ media_endpoint | escape }}"
     data-reviews-page-size="{{ block.settings.reviews_page_size }}"
     {{ block.shopify_attributes }}
   >
     <div class="or-customer-say__shell">
-      {% if block.settings.show_write_review and write_review_href != blank %}
+      {% if block.settings.show_write_review %}
         <div class="or-customer-say__topbar">
-          <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
-            {{ block.settings.write_review_label }}
-          </a>
+          {% if write_review_href != blank %}
+            <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
+              {{ block.settings.write_review_label }}
+            </a>
+          {% else %}
+            <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
+              {{ block.settings.write_review_label }}
+            </button>
+          {% endif %}
         </div>
       {% endif %}
 
@@ -87,6 +104,7 @@
       </div>
     </div>
   </section>
+  <script src="{{ 'customer-say-review-modal.js' | asset_url }}" defer></script>
 {% else %}
   <section class="or-customer-say or-customer-say--placeholder" {{ block.shopify_attributes }}>
     <div class="or-customer-say__shell">
