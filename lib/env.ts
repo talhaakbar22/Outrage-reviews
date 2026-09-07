@@ -53,7 +53,7 @@ export const env = {
   },
   s3ForcePathStyle: () => process.env.S3_FORCE_PATH_STYLE === "true",
   mediaUploadMaxBytes: () =>
-    Number(process.env.MEDIA_UPLOAD_MAX_BYTES ?? 5 * 1024 * 1024),
+    Number(process.env.MEDIA_UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024),
   mediaPresignExpiresSeconds: () =>
     Number(process.env.MEDIA_PRESIGN_EXPIRES_SECONDS ?? 900),
   emailProvider: (): "console" | "resend" => {

@@ -38,11 +38,13 @@ export async function createPresignedPutUrl(input: {
   contentLength: number;
   expiresInSeconds?: number;
 }) {
+  // Do not sign Content-Length: browsers forbid setting that header on fetch(),
+  // which breaks browser → S3 PUTs and often surfaces as "Failed to fetch".
+  void input.contentLength;
   const command = new PutObjectCommand({
     Bucket: env.s3Bucket(),
     Key: input.key,
     ContentType: input.contentType,
-    ContentLength: input.contentLength,
   });
 
   const uploadUrl = await getSignedUrl(getS3Client(), command, {
@@ -53,7 +55,6 @@ export async function createPresignedPutUrl(input: {
     uploadUrl,
     headers: {
       "Content-Type": input.contentType,
-      "Content-Length": String(input.contentLength),
     },
     expiresInSeconds: input.expiresInSeconds ?? env.mediaPresignExpiresSeconds(),
   };

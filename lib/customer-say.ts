@@ -32,6 +32,13 @@ export type CustomerSayViewModel = {
     isVerifiedPurchase: boolean;
     publishedAt?: string | null;
     createdAt?: string;
+    productTitle?: string | null;
+    media?: Array<{
+      id: string;
+      url: string;
+      thumbnailUrl: string | null;
+      type: string;
+    }>;
   }>;
   reviewsTotal: number;
   reviewsOffset: number;

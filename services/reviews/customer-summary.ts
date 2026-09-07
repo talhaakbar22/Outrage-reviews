@@ -1,5 +1,6 @@
 import { getDb, nowInstant, toIsoString } from "@/lib/prisma";
 import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
+import { ensureProductSynced } from "@/services/products/ensure-synced";
 
 export type SummaryHighlight = {
   label: string;
@@ -34,6 +35,13 @@ export type CustomerSayPayload = {
     isVerifiedPurchase: boolean;
     publishedAt: string | null;
     createdAt: string;
+    productTitle: string | null;
+    media: Array<{
+      id: string;
+      url: string;
+      thumbnailUrl: string | null;
+      type: string;
+    }>;
   }>;
   reviewsTotal: number;
   reviewsOffset: number;
@@ -143,14 +151,26 @@ export async function buildCustomerSayPayload(input: {
   includeReviews?: boolean;
 }) {
   const db = getDb();
-  const product = await db.orm.public.Product.where({
+  let product = await db.orm.public.Product.where({
     shopId: input.shopId,
     shopifyProductId: input.shopifyProductId,
   }).first();
 
   if (!product) {
+    product = await ensureProductSynced(input.shopId, input.shopifyProductId);
+  }
+
+  if (!product) {
     return emptyPayload(input.reviewsOffset ?? 0, input.reviewsLimit ?? 10);
   }
+
+  const publishedTotalResult = await db.orm.public.Review.where({
+    shopId: input.shopId,
+    productId: product.id,
+    status: "published",
+  }).aggregate((agg) => ({ count: agg.count() }));
+
+  const publishedCount = Number(publishedTotalResult?.count ?? 0);
 
   const sourceReviews = await db.orm.public.Review.where({
     shopId: input.shopId,
@@ -199,7 +219,7 @@ export async function buildCustomerSayPayload(input: {
     }));
 
   let reviews: CustomerSayPayload["reviews"] = [];
-  let reviewsTotal = product.reviewCount;
+  let reviewsTotal = publishedCount;
   const reviewsOffset = input.reviewsOffset ?? 0;
   const reviewsLimit = Math.min(input.reviewsLimit ?? 10, 50);
 
@@ -209,6 +229,11 @@ export async function buildCustomerSayPayload(input: {
       productId: product.id,
       status: "published",
     })
+      .include("media", (media) =>
+        media
+          .select("id", "url", "thumbnailUrl", "type", "sortOrder")
+          .orderBy((item) => item.sortOrder.asc()),
+      )
       .orderBy((review) => review.publishedAt.desc())
       .offset(reviewsOffset)
       .limit(reviewsLimit)
@@ -223,10 +248,21 @@ export async function buildCustomerSayPayload(input: {
       isVerifiedPurchase: review.isVerifiedPurchase,
       publishedAt: toIsoString(review.publishedAt),
       createdAt: toIsoString(review.createdAt) ?? "",
+      productTitle: product.title,
+      media: [...review.media]
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((item) => ({
+          id: item.id,
+          url: item.url,
+          thumbnailUrl: item.thumbnailUrl,
+          type: item.type,
+        })),
     }));
 
-    reviewsTotal = product.reviewCount;
+    reviewsTotal = publishedCount;
   }
+
+  const displayCount = Math.max(Number(product.reviewCount), publishedCount);
 
   const existingSummary = await db.orm.public.AiSummary.where({
     shopId: input.shopId,
@@ -262,7 +298,7 @@ export async function buildCustomerSayPayload(input: {
     productId: product.id,
     productTitle: product.title,
     rating: product.avgRating != null ? Number(product.avgRating) : null,
-    count: Number(product.reviewCount),
+    count: displayCount,
     verifiedCount,
     summaryText,
     summarySourceCount,
@@ -315,16 +351,21 @@ export function normalizeCustomerSayPayload(
   const normalized = normalizeCustomerSayViewModel(input);
   return {
     ...normalized,
-    reviews: normalized.reviews.map((review) => ({
-      id: review.id,
-      rating: review.rating,
-      title: review.title,
-      body: review.body,
-      reviewerName: review.reviewerName,
-      isVerifiedPurchase: review.isVerifiedPurchase,
-      publishedAt: review.publishedAt ?? null,
-      createdAt: toIsoString(review.createdAt) ?? new Date().toISOString(),
-    })),
+    reviews: normalized.reviews.map((review) => {
+      const extended = review as CustomerSayPayload["reviews"][number];
+      return {
+        id: review.id,
+        rating: review.rating,
+        title: review.title,
+        body: review.body,
+        reviewerName: review.reviewerName,
+        isVerifiedPurchase: review.isVerifiedPurchase,
+        publishedAt: review.publishedAt ?? null,
+        createdAt: toIsoString(review.createdAt) ?? new Date().toISOString(),
+        productTitle: extended.productTitle ?? null,
+        media: extended.media ?? [],
+      };
+    }),
   };
 }
 

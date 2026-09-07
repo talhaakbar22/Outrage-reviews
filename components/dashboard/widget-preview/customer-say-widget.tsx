@@ -26,7 +26,7 @@ export function CustomerSayWidgetPreview({
   loadingMore?: boolean;
   compact?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   if (loading) {
     return (
@@ -49,13 +49,17 @@ export function CustomerSayWidgetPreview({
     (data.summaryGeneratedAt
       ? formatMonthLabel(data.summaryGeneratedAt)
       : "");
-  const showExpanded = expanded || (data.reviews?.length ?? 0) > 0;
   const verifiedCount = Number(data.verifiedCount ?? 0);
   const summarySourceCount = Number(data.summarySourceCount ?? 0);
-  const reviewCount = Number(data.count ?? 0);
+  const reviewCount = Math.max(
+    Number(data.count ?? 0),
+    Number(data.reviewsTotal ?? 0),
+    data.reviews?.length ?? 0,
+  );
   const highlights = data.highlights ?? [];
   const snippets = data.snippets ?? [];
   const reviews = data.reviews ?? [];
+  const showExpanded = expanded;
 
   return (
     <div
@@ -142,10 +146,13 @@ export function CustomerSayWidgetPreview({
             <button
               type="button"
               onClick={() => {
-                if (!showExpanded && onReadMore) {
-                  onReadMore();
-                }
-                setExpanded((value) => !value);
+                setExpanded((value) => {
+                  const next = !value;
+                  if (next && reviews.length === 0 && onReadMore) {
+                    onReadMore();
+                  }
+                  return next;
+                });
               }}
               className="text-sm font-medium text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
             >
@@ -156,6 +163,9 @@ export function CustomerSayWidgetPreview({
 
             {showExpanded ? (
               <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                {reviews.length === 0 && loadingMore ? (
+                  <p className="text-sm text-zinc-500">Loading reviews…</p>
+                ) : null}
                 {reviews.map((review) => (
                   <article
                     key={review.id}
@@ -258,8 +268,7 @@ export function useCustomerSayPreview(shop: string, productId: string | null) {
   );
 
   useEffect(() => {
-    setData(null);
-    void load(false);
+    void load(true, 0, false);
   }, [load]);
 
   const readMore = useCallback(async () => {

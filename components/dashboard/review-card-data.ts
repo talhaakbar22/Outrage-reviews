@@ -15,6 +15,7 @@ export function toReviewCardData(review: DashboardReview): ReviewCardData {
       id: item.id,
       url: item.url,
       thumbnailUrl: item.thumbnailUrl,
+      type: item.type,
     })),
     createdAt: toIsoString(review.createdAt) ?? "",
   };

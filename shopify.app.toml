@@ -5,7 +5,7 @@
 
 client_id = "a8568adbcd8de4fde3d72f2a77cd5172"
 name = "Outrage Reviews"
-application_url = "http://localhost:3000"
+application_url = "https://6b9d-43-251-255-105.ngrok-free.app"
 embedded = true
 
 [build]
@@ -16,7 +16,7 @@ scopes = "read_products,write_products,read_orders,read_customers,write_app_prox
 
 [auth]
 redirect_urls = [
-  "http://localhost:3000/api/auth/callback"
+  "https://6b9d-43-251-255-105.ngrok-free.app/api/auth/callback"
 ]
 
 [app_proxy]

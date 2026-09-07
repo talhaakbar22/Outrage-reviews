@@ -396,14 +396,26 @@
         throw new Error(data.error || "Upload failed");
       }
 
-      var uploadResponse = await fetch(data.uploadUrl, {
-        method: "PUT",
-        headers: data.headers,
-        body: file,
-      });
+      var uploadHeaders = { "Content-Type": file.type || (data.headers && data.headers["Content-Type"]) || "application/octet-stream" };
+      var uploadResponse;
+      try {
+        uploadResponse = await fetch(data.uploadUrl, {
+          method: "PUT",
+          headers: uploadHeaders,
+          body: file,
+        });
+      } catch (networkError) {
+        throw new Error(
+          "Could not reach S3 (Failed to fetch). Usually missing bucket CORS, or the IAM user cannot s3:PutObject.",
+        );
+      }
 
       if (!uploadResponse.ok) {
-        throw new Error("Direct upload failed");
+        throw new Error(
+          "S3 rejected the upload (" +
+            uploadResponse.status +
+            "). Check that IAM user shopify can PutObject on this bucket.",
+        );
       }
 
       this.state.media.push({

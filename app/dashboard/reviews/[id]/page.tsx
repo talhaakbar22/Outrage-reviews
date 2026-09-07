@@ -65,23 +65,46 @@ export default async function ReviewDetailPage({
 
           {review.media.length > 0 ? (
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {review.media.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="relative aspect-square overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800"
-                >
-                  <Image
-                    src={item.thumbnailUrl || item.url}
-                    alt="Review media"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </a>
-              ))}
+              {review.media.map((item) => {
+                const isVideo =
+                  item.type === "video" ||
+                  /\.(mp4|mov|webm|m4v)(\?|$)/i.test(item.url);
+
+                return (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="relative aspect-square overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    {isVideo ? (
+                      <>
+                        <video
+                          src={item.url}
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+                          <span className="rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
+                            ▶ Video
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <Image
+                        src={item.thumbnailUrl || item.url}
+                        alt="Review media"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    )}
+                  </a>
+                );
+              })}
             </div>
           ) : null}
 
@@ -91,7 +114,10 @@ export default async function ReviewDetailPage({
                 Replies
               </h2>
               {review.replies.map((reply) => (
-                <div key={reply.id} className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900">
+                <div
+                  key={reply.id}
+                  className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900"
+                >
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                     {reply.authorName || "Store team"}
                   </p>
@@ -118,7 +144,10 @@ export default async function ReviewDetailPage({
           <Suspense fallback={null}>
             <ReviewModerationCard
               review={toReviewCardData(review)}
-              detailHref={withShopPath(`/dashboard/reviews/${review.id}`, query)}
+              detailHref={withShopPath(
+                `/dashboard/reviews/${review.id}`,
+                query,
+              )}
             />
           </Suspense>
         </aside>

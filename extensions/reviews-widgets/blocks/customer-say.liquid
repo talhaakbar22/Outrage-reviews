@@ -1,6 +1,6 @@
 {% comment %}
-  "What customers say" — AI-style review summary with theme tags, quote snippets,
-  and paginated full review list.
+  "What customers say" — matches dashboard widget preview:
+  score + summary, Write a review, Hide/Show reviews, listing cards.
 {% endcomment %}
 
 {% liquid
@@ -51,35 +51,38 @@
     data-submit-endpoint="{{ submit_endpoint | escape }}"
     data-media-endpoint="{{ media_endpoint | escape }}"
     data-reviews-page-size="{{ block.settings.reviews_page_size }}"
+    data-star-color="{{ block.settings.star_color | escape }}"
     {{ block.shopify_attributes }}
   >
     <div class="or-customer-say__shell">
-      {% if block.settings.show_write_review %}
-        <div class="or-customer-say__topbar">
-          {% if write_review_href != blank %}
-            <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
-              {{ block.settings.write_review_label }}
-            </a>
-          {% else %}
-            <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
-              {{ block.settings.write_review_label }}
-            </button>
-          {% endif %}
-        </div>
-      {% endif %}
-
       <div class="or-customer-say__hero">
         <div class="or-customer-say__score">
           <p class="or-customer-say__average" data-outrage-average>
-            {% if review_count > 0 %}{{ rating_value | round: 2 }}{% else %}—{% endif %}
+            {% if review_count > 0 %}{{ rating_value | round: 1 }}{% else %}—{% endif %}
           </p>
-          {% render 'stars', rating: rating_value, size: 18, color: block.settings.star_color %}
+          <div data-outrage-score-stars>
+            {% render 'stars', rating: rating_value, size: 18, color: block.settings.star_color %}
+          </div>
           <p class="or-customer-say__verified" data-outrage-verified-count>
-            {% if review_count > 0 %}{{ review_count }} verified reviews{% endif %}
+            {% if review_count > 0 %}{{ review_count }} verified reviews{% else %}0 verified reviews{% endif %}
           </p>
         </div>
 
         <div class="or-customer-say__summary">
+          {% if block.settings.show_write_review %}
+            <div class="or-customer-say__summary-actions">
+              {% if write_review_href != blank %}
+                <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
+                  {{ block.settings.write_review_label }}
+                </a>
+              {% else %}
+                <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
+                  {{ block.settings.write_review_label }}
+                </button>
+              {% endif %}
+            </div>
+          {% endif %}
+
           <p class="or-customer-say__text" data-outrage-summary-text>
             Loading customer summary…
           </p>
@@ -90,16 +93,26 @@
       <div class="or-customer-say__tags" data-outrage-highlights hidden></div>
       <div class="or-customer-say__snippets" data-outrage-snippets hidden></div>
 
-      <div class="or-customer-say__actions">
-        <button type="button" class="or-customer-say__read-all" data-outrage-read-all hidden>
-          Read all reviews
+      <div class="or-customer-say__listing" data-outrage-listing hidden>
+        <button type="button" class="or-customer-say__toggle" data-outrage-toggle-reviews>
+          Hide reviews
         </button>
+
+        <div class="or-customer-say__reviews" data-outrage-reviews-panel>
+          <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
+          <p class="or-customer-say__reviews-empty" data-outrage-reviews-empty hidden>
+            No published reviews yet.
+          </p>
+          <p class="or-customer-say__reviews-error" data-outrage-reviews-error hidden></p>
+          <button type="button" class="or-customer-say__load-more" data-outrage-load-more hidden>
+            Load more reviews
+          </button>
+        </div>
       </div>
 
-      <div class="or-customer-say__reviews" data-outrage-reviews-panel hidden>
-        <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
-        <button type="button" class="or-customer-say__load-more" data-outrage-load-more hidden>
-          Load more reviews
+      <div class="or-customer-say__actions" data-outrage-actions hidden>
+        <button type="button" class="or-customer-say__read-all" data-outrage-read-all>
+          Read all reviews
         </button>
       </div>
     </div>

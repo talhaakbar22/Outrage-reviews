@@ -10,7 +10,7 @@ import {
 } from "@/services/media/object-storage";
 
 const MAX_IMAGE_DIMENSION = 4000;
-const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 
 export async function processReviewMedia(job: MediaProcessingJobData) {
   const source = await getObjectBuffer(job.pendingKey);

@@ -26,7 +26,12 @@ type ManageReview = {
     handle: string | null;
     shopifyProductId: string;
   };
-  media: Array<{ id: string; url: string; thumbnailUrl: string | null }>;
+  media: Array<{
+    id: string;
+    url: string;
+    thumbnailUrl: string | null;
+    type: string;
+  }>;
   replies: Array<{ id: string; body: string; authorName: string | null }>;
 };
 
@@ -600,23 +605,44 @@ export function ManageReviewsWorkspace({
 
                         {review.media.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
-                            {review.media.map((item) => (
-                              <a
-                                key={item.id}
-                                href={item.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="relative h-16 w-16 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
-                              >
-                                <Image
-                                  src={item.thumbnailUrl || item.url}
-                                  alt=""
-                                  fill
-                                  className="object-cover"
-                                  unoptimized
-                                />
-                              </a>
-                            ))}
+                            {review.media.map((item) => {
+                              const isVideo =
+                                item.type === "video" ||
+                                /\.(mp4|mov|webm|m4v)(\?|$)/i.test(item.url);
+
+                              return (
+                                <a
+                                  key={item.id}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="relative h-16 w-16 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900"
+                                >
+                                  {isVideo ? (
+                                    <>
+                                      <video
+                                        src={item.url}
+                                        className="h-full w-full object-cover"
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                      />
+                                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 text-[10px] font-semibold text-white">
+                                        ▶
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <Image
+                                      src={item.thumbnailUrl || item.url}
+                                      alt=""
+                                      fill
+                                      className="object-cover"
+                                      unoptimized
+                                    />
+                                  )}
+                                </a>
+                              );
+                            })}
                           </div>
                         ) : null}
 

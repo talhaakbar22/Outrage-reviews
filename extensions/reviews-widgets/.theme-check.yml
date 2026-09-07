@@ -1,0 +1,11 @@
+extends: theme-check:theme-app-extension
+
+# Default app-block JS limit is 10KB; customer-say-widget.js is ~12KB.
+AssetSizeAppBlockJavaScript:
+  enabled: true
+  severity: warning
+  threshold_in_bytes: 25000
+
+AssetSizeAppBlockCss:
+  enabled: true
+  threshold_in_bytes: 100000
