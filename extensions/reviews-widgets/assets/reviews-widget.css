@@ -590,7 +590,9 @@ body.or-review-modal-open {
 }
 
 .or-review-modal__content {
+  position: relative;
   padding: 1.5rem;
+  padding-bottom: 4rem;
 }
 
 .or-review-modal__header {
@@ -696,6 +698,72 @@ body.or-review-modal-open {
   font-size: 1.35rem;
 }
 
+.or-review-modal__toast {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  z-index: 5;
+  transform: translateX(-50%);
+  max-width: calc(100% - 2rem);
+  border-radius: 999px;
+  background: #18181b;
+  color: #fff;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  animation: or-review-toast-in 0.2s ease;
+}
+
+@keyframes or-review-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.or-review-modal__upload-card.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.or-review-modal__upload-progress {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.or-review-modal__upload-progress-row {
+  font-size: 0.8125rem;
+  color: #27272a;
+}
+
+.or-review-modal__upload-progress-row--muted {
+  color: #71717a;
+}
+
+.or-review-modal__upload-bar {
+  margin-top: 0.25rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #e4e4e7;
+  overflow: hidden;
+}
+
+.or-review-modal__upload-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #18181b;
+  transition: width 0.25s ease;
+}
+
 .or-review-modal__media-previews {
   display: flex;
   flex-wrap: wrap;
@@ -705,17 +773,37 @@ body.or-review-modal-open {
 
 .or-review-modal__media-preview {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #e4e4e7;
+  background: #f4f4f5;
+}
+
+.or-review-modal__media-preview.is-uploading {
+  border-color: #a1a1aa;
+}
+
+.or-review-modal__media-preview.is-failed {
+  border-color: #fca5a5;
+}
+
+.or-review-modal__media-preview.is-done {
+  border-color: #86efac;
 }
 
 .or-review-modal__media-preview img,
-.or-review-modal__media-video {
+.or-review-modal__media-video,
+.or-review-modal__media-video video {
   width: 100%;
   height: 100%;
-  border-radius: 0.75rem;
   object-fit: cover;
+  display: block;
   background: #f4f4f5;
+}
+
+.or-review-modal__media-video {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -723,10 +811,46 @@ body.or-review-modal-open {
   color: #52525b;
 }
 
+.or-review-modal__media-loader,
+.or-review-modal__media-failed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(24, 24, 27, 0.55);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.35rem;
+}
+
+.or-review-modal__media-failed {
+  background: rgba(127, 29, 29, 0.72);
+}
+
+.or-review-modal__spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: or-review-spin 0.7s linear infinite;
+}
+
+@keyframes or-review-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .or-review-modal__media-remove {
   position: absolute;
-  top: -0.35rem;
-  right: -0.35rem;
+  top: 0.3rem;
+  right: 0.3rem;
   width: 1.35rem;
   height: 1.35rem;
   border: 0;
@@ -734,6 +858,14 @@ body.or-review-modal-open {
   background: #18181b;
   color: #fff;
   cursor: pointer;
+  z-index: 2;
+}
+
+.or-review-modal__next:disabled,
+.or-review-modal__skip:disabled,
+.or-review-modal__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .or-review-modal__field {

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { compressImageForUpload } from "@/lib/media/compress-image";
 
 type ReviewPageData = {
   product: {
@@ -55,12 +56,14 @@ export function ReviewSubmissionForm({ token }: { token: string }) {
   }, [token]);
 
   async function handleUpload(file: File, index: number) {
+    const prepared = await compressImageForUpload(file);
+
     const permissionResponse = await fetch(`/api/review/${token}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contentType: file.type,
-        contentLength: file.size,
+        contentType: prepared.contentType,
+        contentLength: prepared.blob.size,
         sortOrder: index,
       }),
     });
@@ -72,8 +75,11 @@ export function ReviewSubmissionForm({ token }: { token: string }) {
 
     const uploadResponse = await fetch(permission.uploadUrl, {
       method: "PUT",
-      headers: permission.headers,
-      body: file,
+      headers: {
+        ...(permission.headers ?? {}),
+        "Content-Type": prepared.contentType,
+      },
+      body: prepared.blob,
     });
 
     if (!uploadResponse.ok) {
@@ -84,7 +90,7 @@ export function ReviewSubmissionForm({ token }: { token: string }) {
       const next = current.filter((item) => item.sortOrder !== permission.sortOrder);
       next.push({
         mediaKey: permission.mediaKey,
-        publicUrl: permission.publicUrl,
+        publicUrl: URL.createObjectURL(prepared.blob),
         sortOrder: permission.sortOrder,
       });
       return next.sort((a, b) => a.sortOrder - b.sortOrder);
@@ -233,17 +239,34 @@ export function ReviewSubmissionForm({ token }: { token: string }) {
 
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Photos (optional, up to 5)
+          Photos (optional, up to 8 — compressed before upload)
         </label>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
           multiple
-          disabled={uploadingCount > 0 || media.length >= 5}
+          disabled={uploadingCount > 0 || media.length >= 8}
           className="mt-2 block w-full text-sm disabled:opacity-60"
           onChange={async (event) => {
-            const files = Array.from(event.target.files ?? []).slice(0, 5 - media.length);
-            setPageError(null);
+            const picked = Array.from(event.target.files ?? []);
+            const remaining = 8 - media.length;
+            if (remaining <= 0) {
+              setPageError("Limit reached. You can add up to 8 files.");
+              event.target.value = "";
+              return;
+            }
+            if (picked.length > remaining) {
+              setPageError(
+                `Limit reached. Only ${remaining} more file(s) allowed (max 8).`,
+              );
+            } else {
+              setPageError(null);
+            }
+            const files = picked.slice(0, remaining);
+            if (!files.length) {
+              event.target.value = "";
+              return;
+            }
             setUploadingCount(files.length);
 
             try {

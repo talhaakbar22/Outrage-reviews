@@ -35,6 +35,84 @@
     }
   }
 
+  var MAX_IMAGE_EDGE = 1920;
+  var IMAGE_QUALITY = 0.82;
+  var MAX_MEDIA_FILES = 8;
+
+  function canvasToBlob(canvas, type, quality) {
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(
+        function (blob) {
+          if (!blob) {
+            reject(new Error("Could not compress image"));
+            return;
+          }
+          resolve(blob);
+        },
+        type,
+        quality,
+      );
+    });
+  }
+
+  async function compressImageFile(file) {
+    // Keep animated GIFs intact
+    if (file.type === "image/gif") {
+      return { blob: file, contentType: file.type };
+    }
+
+    if (!file.type || file.type.indexOf("image/") !== 0) {
+      return { blob: file, contentType: file.type || "application/octet-stream" };
+    }
+
+    var bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch (error) {
+      return { blob: file, contentType: file.type };
+    }
+
+    try {
+      var scale = Math.min(
+        1,
+        MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height),
+      );
+      var width = Math.max(1, Math.round(bitmap.width * scale));
+      var height = Math.max(1, Math.round(bitmap.height * scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      var ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) {
+        return { blob: file, contentType: file.type };
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, width, height);
+
+      var outputType = "image/jpeg";
+      var blob = await canvasToBlob(canvas, outputType, IMAGE_QUALITY);
+
+      // Prefer original if compression did not help
+      if (scale === 1 && blob.size >= file.size * 0.95) {
+        return { blob: file, contentType: file.type };
+      }
+
+      return { blob: blob, contentType: outputType };
+    } finally {
+      if (bitmap && bitmap.close) bitmap.close();
+    }
+  }
+
+  async function prepareUploadFile(file, kind) {
+    if (kind === "video" || (file.type && file.type.indexOf("video/") === 0)) {
+      // Browser video re-encode needs heavy tooling; upload original.
+      return { blob: file, contentType: file.type || "video/mp4" };
+    }
+
+    return compressImageFile(file);
+  }
+
   var STEPS = ["rating", "media", "body", "contact", "thanks"];
 
   function ReviewModal(config) {
@@ -48,13 +126,51 @@
       email: "",
       media: [],
       uploadSessionId: createSessionId(),
-      uploading: 0,
+      uploadBatch: { total: 0, completed: 0, failed: 0 },
+      toast: null,
+      toastTimer: null,
       submitting: false,
       error: null,
       message: null,
     };
     this.overlay = null;
+    this._mediaSeq = 0;
   }
+
+  ReviewModal.prototype.nextLocalId = function () {
+    this._mediaSeq += 1;
+    return "local-" + this._mediaSeq;
+  };
+
+  ReviewModal.prototype.countMediaByStatus = function (status) {
+    return this.state.media.filter(function (item) {
+      return item.status === status;
+    }).length;
+  };
+
+  ReviewModal.prototype.hasUploadingMedia = function () {
+    return this.countMediaByStatus("uploading") > 0;
+  };
+
+  ReviewModal.prototype.readyMedia = function () {
+    return this.state.media.filter(function (item) {
+      return item.status === "done" && item.mediaKey;
+    });
+  };
+
+  ReviewModal.prototype.showToast = function (message) {
+    var self = this;
+    this.state.toast = message;
+    if (this.state.toastTimer) {
+      clearTimeout(this.state.toastTimer);
+    }
+    this.render();
+    this.state.toastTimer = setTimeout(function () {
+      self.state.toast = null;
+      self.state.toastTimer = null;
+      self.render();
+    }, 3200);
+  };
 
   ReviewModal.prototype.open = function () {
     if (this.overlay) return;
@@ -81,7 +197,16 @@
   };
 
   ReviewModal.prototype.close = function () {
+    if (this.state.toastTimer) {
+      clearTimeout(this.state.toastTimer);
+      this.state.toastTimer = null;
+    }
     if (this.overlay) {
+      this.state.media.forEach(function (item) {
+        if (item.previewUrl && String(item.previewUrl).indexOf("blob:") === 0) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
       this.overlay.remove();
       this.overlay = null;
     }
@@ -108,7 +233,12 @@
     content.innerHTML =
       this.renderHeader() +
       this.renderStepBody() +
-      this.renderFooter();
+      this.renderFooter() +
+      (this.state.toast
+        ? '<div class="or-review-modal__toast" role="status">' +
+          escapeHtml(this.state.toast) +
+          "</div>"
+        : "");
 
     this.bindStep(content);
   };
@@ -165,41 +295,135 @@
     }
 
     if (this.state.step === "media") {
+      var uploadingCount = this.countMediaByStatus("uploading");
+      var doneCount = this.countMediaByStatus("done");
+      var failedCount = this.countMediaByStatus("failed");
+      var totalSelected = this.state.media.length;
+      var batch = this.state.uploadBatch;
+      var remainingUploads = Math.max(
+        0,
+        batch.total - batch.completed - batch.failed,
+      );
+      var slotsLeft = Math.max(0, MAX_MEDIA_FILES - totalSelected);
+      var inputsDisabled = uploadingCount > 0 || totalSelected >= MAX_MEDIA_FILES;
+
+      var progressHtml = "";
+      if (totalSelected > 0 || batch.total > 0) {
+        var barPct = batch.total
+          ? Math.round(((batch.completed + batch.failed) / batch.total) * 100)
+          : totalSelected
+            ? Math.round((doneCount / totalSelected) * 100)
+            : 0;
+        progressHtml =
+          '<div class="or-review-modal__upload-progress" aria-live="polite">' +
+          '<div class="or-review-modal__upload-progress-row">' +
+          "<strong>" +
+          doneCount +
+          "</strong> uploaded" +
+          (failedCount
+            ? " · <strong>" + failedCount + "</strong> failed"
+            : "") +
+          (uploadingCount
+            ? " · <strong>" + uploadingCount + "</strong> uploading"
+            : "") +
+          " · <strong>" +
+          totalSelected +
+          "</strong> selected</div>" +
+          (batch.total > 0
+            ? '<div class="or-review-modal__upload-progress-row or-review-modal__upload-progress-row--muted">' +
+              "This batch: " +
+              (batch.completed + batch.failed) +
+              " of " +
+              batch.total +
+              " finished" +
+              (remainingUploads ? " · " + remainingUploads + " remaining" : "") +
+              "</div>"
+            : "") +
+          '<div class="or-review-modal__upload-progress-row or-review-modal__upload-progress-row--muted">' +
+          slotsLeft +
+          " of " +
+          MAX_MEDIA_FILES +
+          " slots left</div>" +
+          '<div class="or-review-modal__upload-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+          barPct +
+          '"><span style="width:' +
+          barPct +
+          '%"></span></div></div>';
+      }
+
       var previews = this.state.media
         .map(function (item, index) {
           var label = item.mediaType === "video" ? "Video" : "Photo";
+          var status = item.status || "done";
+          var previewSrc = item.previewUrl || item.publicUrl || "";
+          var mediaContent =
+            item.mediaType === "video"
+              ? '<div class="or-review-modal__media-video">' +
+                (previewSrc
+                  ? '<video src="' +
+                    escapeHtml(previewSrc) +
+                    '" muted playsinline preload="metadata"></video>'
+                  : "Video") +
+                "</div>"
+              : previewSrc
+                ? '<img src="' + escapeHtml(previewSrc) + '" alt="" />'
+                : '<div class="or-review-modal__media-video">Photo</div>';
+
           return (
-            '<div class="or-review-modal__media-preview">' +
-            (item.mediaType === "video"
-              ? '<div class="or-review-modal__media-video">Video added</div>'
-              : '<img src="' + escapeHtml(item.publicUrl) + '" alt="" />') +
-            '<button type="button" class="or-review-modal__media-remove" data-or-review-remove-media="' +
-            index +
-            '" aria-label="Remove ' +
-            label +
-            '">&times;</button></div>'
+            '<div class="or-review-modal__media-preview' +
+            (status === "uploading" ? " is-uploading" : "") +
+            (status === "failed" ? " is-failed" : "") +
+            (status === "done" ? " is-done" : "") +
+            '">' +
+            mediaContent +
+            (status === "uploading"
+              ? '<div class="or-review-modal__media-loader" aria-hidden="true">' +
+                '<span class="or-review-modal__spinner"></span>' +
+                "<span>Uploading…</span></div>"
+              : "") +
+            (status === "failed"
+              ? '<div class="or-review-modal__media-failed">Failed</div>'
+              : "") +
+            (status !== "uploading"
+              ? '<button type="button" class="or-review-modal__media-remove" data-or-review-remove-media="' +
+                index +
+                '" aria-label="Remove ' +
+                label +
+                '">&times;</button>'
+              : "") +
+            "</div>"
           );
         })
         .join("");
 
       return (
         '<div class="or-review-modal__step">' +
-        '<p class="or-review-modal__prompt">Add a photo or video (optional)</p>' +
+        '<p class="or-review-modal__prompt">Add photos or videos (optional, up to ' +
+        MAX_MEDIA_FILES +
+        ")</p>" +
         this.renderStars(false) +
         '<div class="or-review-modal__upload-grid">' +
-        '<label class="or-review-modal__upload-card">' +
-        '<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-or-review-upload="image" hidden />' +
+        '<label class="or-review-modal__upload-card' +
+        (inputsDisabled ? " is-disabled" : "") +
+        '">' +
+        '<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-or-review-upload="image" multiple hidden' +
+        (inputsDisabled ? " disabled" : "") +
+        " />" +
         '<span class="or-review-modal__upload-icon">📷</span>' +
-        "<strong>Upload a photo</strong>" +
-        "<span>JPEG, PNG, WebP</span></label>" +
-        '<label class="or-review-modal__upload-card">' +
-        '<input type="file" accept="video/mp4,video/quicktime,video/webm" data-or-review-upload="video" hidden />' +
+        "<strong>Upload photos</strong>" +
+        "<span>Select multiple · auto-compressed</span></label>" +
+        '<label class="or-review-modal__upload-card' +
+        (inputsDisabled ? " is-disabled" : "") +
+        '">' +
+        '<input type="file" accept="video/mp4,video/quicktime,video/webm" data-or-review-upload="video" multiple hidden' +
+        (inputsDisabled ? " disabled" : "") +
+        " />" +
         '<span class="or-review-modal__upload-icon">🎬</span>' +
-        "<strong>Upload a video</strong>" +
-        "<span>MP4, MOV, WebM</span></label></div>" +
-        (previews ? '<div class="or-review-modal__media-previews">' + previews + "</div>" : "") +
-        (this.state.uploading > 0
-          ? '<p class="or-review-modal__hint">Uploading…</p>'
+        "<strong>Upload videos</strong>" +
+        "<span>Select multiple · MP4, MOV, WebM</span></label></div>" +
+        progressHtml +
+        (previews
+          ? '<div class="or-review-modal__media-previews">' + previews + "</div>"
           : "") +
         "</div>"
       );
@@ -242,10 +466,13 @@
   };
 
   ReviewModal.prototype.renderFooter = function () {
-    var hasMedia = this.state.media.length > 0;
+    var readyCount = this.readyMedia().length;
+    var uploading = this.hasUploadingMedia();
     var skipHidden = this.state.step !== "media";
-    var nextLabel = "Next";
-    var showNext = this.state.step === "body" || (this.state.step === "media" && hasMedia);
+    var nextLabel = uploading ? "Uploading…" : "Next";
+    var showNext =
+      this.state.step === "body" ||
+      (this.state.step === "media" && readyCount > 0 && !uploading);
     var showSubmit = this.state.step === "contact";
 
     return (
@@ -256,14 +483,20 @@
       '<div class="or-review-modal__footer-actions">' +
       (skipHidden
         ? ""
-        : '<button type="button" class="or-review-modal__skip" data-or-review-skip>Skip</button>') +
-      (showNext
-        ? '<button type="button" class="or-review-modal__next" data-or-review-next>' +
+        : '<button type="button" class="or-review-modal__skip" data-or-review-skip' +
+          (uploading ? " disabled" : "") +
+          ">Skip</button>") +
+      (showNext || (this.state.step === "media" && uploading)
+        ? '<button type="button" class="or-review-modal__next" data-or-review-next' +
+          (uploading ? " disabled" : "") +
+          ">" +
           nextLabel +
           "</button>"
         : "") +
       (showSubmit
-        ? '<button type="button" class="or-review-modal__submit" data-or-review-submit>' +
+        ? '<button type="button" class="or-review-modal__submit" data-or-review-submit' +
+          (this.state.submitting || uploading ? " disabled" : "") +
+          ">" +
           (this.state.submitting ? "Submitting…" : "Submit") +
           "</button>"
         : "") +
@@ -311,6 +544,7 @@
     var skip = content.querySelector("[data-or-review-skip]");
     if (skip) {
       skip.addEventListener("click", function () {
+        if (self.hasUploadingMedia()) return;
         self.setStep("body");
       });
     }
@@ -318,7 +552,17 @@
     var next = content.querySelector("[data-or-review-next]");
     if (next) {
       next.addEventListener("click", function () {
+        if (self.hasUploadingMedia()) return;
         if (self.state.step === "media") {
+          if (
+            self.countMediaByStatus("failed") > 0 &&
+            self.readyMedia().length === 0
+          ) {
+            self.state.error =
+              "Some uploads failed. Remove failed items or try again.";
+            self.render();
+            return;
+          }
           self.setStep("body");
           return;
         }
@@ -349,44 +593,155 @@
 
     content.querySelectorAll("[data-or-review-upload]").forEach(function (input) {
       input.addEventListener("change", function (event) {
-        var file = event.target.files && event.target.files[0];
+        var files = event.target.files ? Array.prototype.slice.call(event.target.files) : [];
         event.target.value = "";
-        if (!file) return;
+        if (!files.length) return;
         var kind = input.getAttribute("data-or-review-upload") || "image";
-        void self.uploadFile(file, kind);
+        void self.uploadFiles(files, kind);
       });
     });
 
     content.querySelectorAll("[data-or-review-remove-media]").forEach(function (button) {
       button.addEventListener("click", function () {
         var index = Number(button.getAttribute("data-or-review-remove-media"));
+        var removed = self.state.media[index];
+        if (!removed || removed.status === "uploading") return;
+        if (
+          removed.previewUrl &&
+          String(removed.previewUrl).indexOf("blob:") === 0
+        ) {
+          URL.revokeObjectURL(removed.previewUrl);
+        }
         self.state.media.splice(index, 1);
         self.render();
       });
     });
   };
 
-  ReviewModal.prototype.uploadFile = async function (file, kind) {
-    if (this.state.media.length >= 5) {
-      this.state.error = "You can add up to 5 files.";
-      this.render();
+  ReviewModal.prototype.updateMediaItem = function (localId, patch) {
+    var item = this.state.media.find(function (entry) {
+      return entry.localId === localId;
+    });
+    if (!item) return;
+    Object.keys(patch).forEach(function (key) {
+      item[key] = patch[key];
+    });
+  };
+
+  ReviewModal.prototype.uploadFiles = async function (files, kind) {
+    var remaining = MAX_MEDIA_FILES - this.state.media.length;
+    if (remaining <= 0) {
+      this.showToast("Limit reached. You can add up to " + MAX_MEDIA_FILES + " files.");
       return;
     }
 
-    this.state.uploading += 1;
-    this.state.error = null;
+    if (files.length > remaining) {
+      this.showToast(
+        "Limit reached. Only " +
+          remaining +
+          " more file(s) allowed (max " +
+          MAX_MEDIA_FILES +
+          ").",
+      );
+    } else {
+      this.state.error = null;
+    }
+
+    var selected = files.slice(0, remaining);
+    if (!selected.length) return;
+
+    this.state.uploadBatch = {
+      total: selected.length,
+      completed: 0,
+      failed: 0,
+    };
+
+    var queued = [];
+    for (var i = 0; i < selected.length; i += 1) {
+      var file = selected[i];
+      var localId = this.nextLocalId();
+      var previewUrl = URL.createObjectURL(file);
+      var sortOrder = this.state.media.length;
+      this.state.media.push({
+        localId: localId,
+        status: "uploading",
+        mediaType: kind,
+        previewUrl: previewUrl,
+        publicUrl: previewUrl,
+        mediaKey: null,
+        sortOrder: sortOrder,
+        error: null,
+      });
+      queued.push({ file: file, localId: localId, sortOrder: sortOrder });
+    }
+
     this.render();
 
+    for (var q = 0; q < queued.length; q += 1) {
+      await this.uploadFile(queued[q].file, kind, queued[q].sortOrder, queued[q].localId);
+    }
+  };
+
+  ReviewModal.prototype.uploadFile = async function (file, kind, sortOrder, localId) {
+    var order =
+      typeof sortOrder === "number" && Number.isFinite(sortOrder)
+        ? sortOrder
+        : this.state.media.length;
+    var id = localId || this.nextLocalId();
+
+    if (!localId) {
+      var previewUrl = URL.createObjectURL(file);
+      this.state.media.push({
+        localId: id,
+        status: "uploading",
+        mediaType: kind,
+        previewUrl: previewUrl,
+        publicUrl: previewUrl,
+        mediaKey: null,
+        sortOrder: order,
+        error: null,
+      });
+      this.render();
+    }
+
     try {
+      var prepared = await prepareUploadFile(file, kind);
+      var uploadBlob = prepared.blob;
+      var contentType = prepared.contentType || file.type || "application/octet-stream";
+
+      if (
+        kind === "image" ||
+        (contentType && contentType.indexOf("image/") === 0)
+      ) {
+        var oldPreview = null;
+        var existing = this.state.media.find(function (entry) {
+          return entry.localId === id;
+        });
+        if (existing) oldPreview = existing.previewUrl;
+        var compressedPreview = URL.createObjectURL(uploadBlob);
+        this.updateMediaItem(id, {
+          previewUrl: compressedPreview,
+          publicUrl: compressedPreview,
+        });
+        if (
+          oldPreview &&
+          oldPreview !== compressedPreview &&
+          String(oldPreview).indexOf("blob:") === 0
+        ) {
+          URL.revokeObjectURL(oldPreview);
+        }
+        this.render();
+      }
+
       var response = await fetch(proxyUrl(this.config.mediaEndpoint), {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           shop: shopDomain(),
           upload_session_id: this.state.uploadSessionId,
-          contentType: file.type,
-          contentLength: file.size,
-          sortOrder: this.state.media.length,
+          contentType: contentType,
+          contentLength: uploadBlob.size,
+          sortOrder: order,
         }),
       });
 
@@ -396,13 +751,18 @@
         throw new Error(data.error || "Upload failed");
       }
 
-      var uploadHeaders = { "Content-Type": file.type || (data.headers && data.headers["Content-Type"]) || "application/octet-stream" };
+      var uploadHeaders = {
+        "Content-Type":
+          contentType ||
+          (data.headers && data.headers["Content-Type"]) ||
+          "application/octet-stream",
+      };
       var uploadResponse;
       try {
         uploadResponse = await fetch(data.uploadUrl, {
           method: "PUT",
           headers: uploadHeaders,
-          body: file,
+          body: uploadBlob,
         });
       } catch (networkError) {
         throw new Error(
@@ -418,16 +778,20 @@
         );
       }
 
-      this.state.media.push({
+      this.updateMediaItem(id, {
+        status: "done",
         mediaKey: data.mediaKey,
-        publicUrl: data.publicUrl,
-        sortOrder: data.sortOrder,
+        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : order,
         mediaType: data.mediaType || kind,
+        error: null,
       });
+      this.state.uploadBatch.completed += 1;
     } catch (error) {
-      this.state.error = error instanceof Error ? error.message : "Upload failed";
+      var message = error instanceof Error ? error.message : "Upload failed";
+      this.updateMediaItem(id, { status: "failed", error: message });
+      this.state.uploadBatch.failed += 1;
+      this.state.error = message;
     } finally {
-      this.state.uploading = Math.max(0, this.state.uploading - 1);
       this.render();
     }
   };
@@ -453,6 +817,12 @@
       return;
     }
 
+    if (this.hasUploadingMedia()) {
+      this.state.error = "Please wait for uploads to finish.";
+      this.render();
+      return;
+    }
+
     this.state.submitting = true;
     this.state.error = null;
     this.render();
@@ -470,7 +840,7 @@
           first_name: this.state.firstName,
           last_name: this.state.lastName,
           email: this.state.email,
-          media: this.state.media.map(function (item) {
+          media: this.readyMedia().map(function (item) {
             return {
               mediaKey: item.mediaKey,
               sortOrder: item.sortOrder,

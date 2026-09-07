@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 4) {
+    if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 7) {
       return NextResponse.json(
         { error: "Invalid sort order" },
         { status: 400, headers: corsHeaders(origin) },
