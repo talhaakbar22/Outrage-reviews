@@ -102,6 +102,73 @@
       .join("");
   }
 
+  function isVideoMedia(item) {
+    if (!item) return false;
+    if (
+      String(item.type || "")
+        .toLowerCase()
+        .indexOf("video") >= 0
+    ) {
+      return true;
+    }
+    return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(String(item.url || ""));
+  }
+
+  function renderReviewMedia(media) {
+    if (!media || !media.length) return "";
+
+    var first = media[0];
+    var second = media[1];
+    var remainingAfterFirst = media.length - 1;
+    var showMoreOverlay = media.length > 2;
+
+    function thumbHtml(item, index, overlayHtml) {
+      var src = item.thumbnailUrl || item.url;
+      if (!src && !item.url) return "";
+      var href = escapeHtml(item.url || src);
+      var video = isVideoMedia(item);
+      var mediaInner = video
+        ? '<video src="' +
+          escapeHtml(item.url || src) +
+          '" muted playsinline preload="metadata"></video>'
+        : '<img src="' + escapeHtml(src) + '" alt="" loading="lazy" />';
+      var defaultOverlay =
+        video && !overlayHtml
+          ? '<span class="or-customer-say__media-play" aria-hidden="true">▶</span>'
+          : "";
+
+      return (
+        '<a class="or-customer-say__media-item' +
+        (video ? " is-video" : "") +
+        '" href="' +
+        href +
+        '" target="_blank" rel="noreferrer" aria-label="Open review media ' +
+        (index + 1) +
+        '">' +
+        mediaInner +
+        (overlayHtml || defaultOverlay) +
+        "</a>"
+      );
+    }
+
+    return (
+      '<div class="or-customer-say__review-media">' +
+      thumbHtml(first, 0, null) +
+      (second
+        ? thumbHtml(
+            second,
+            1,
+            showMoreOverlay
+              ? '<span class="or-customer-say__media-more">+' +
+                  remainingAfterFirst +
+                  " more</span>"
+              : null,
+          )
+        : "") +
+      "</div>"
+    );
+  }
+
   function renderReviews(container, reviews, starColor) {
     if (!reviews || !reviews.length) {
       return false;
@@ -109,16 +176,22 @@
 
     var html = reviews
       .map(function (review) {
+        var hasMedia = review.media && review.media.length > 0;
         return (
-          '<article class="or-customer-say__review-card">' +
+          '<article class="or-customer-say__review-card' +
+          (hasMedia ? " has-media" : "") +
+          '">' +
+          '<div class="or-customer-say__review-main">' +
           '<div class="or-customer-say__review-top">' +
+          '<div class="or-customer-say__review-identity">' +
           '<span class="or-customer-say__review-name">' +
           escapeHtml(review.reviewerName || "Customer") +
           "</span>" +
-          starsHtml(review.rating, starColor) +
           (review.isVerifiedPurchase
             ? '<span class="or-customer-say__verified-badge">Verified</span>'
             : "") +
+          "</div>" +
+          starsHtml(review.rating, starColor) +
           "</div>" +
           (review.title
             ? '<p class="or-customer-say__review-title">' +
@@ -130,6 +203,8 @@
               escapeHtml(review.body) +
               "</p>"
             : "") +
+          "</div>" +
+          renderReviewMedia(review.media) +
           "</article>"
         );
       })
@@ -159,23 +234,18 @@
   function setListingExpanded(root, expanded, reviewCount) {
     var listing = root.querySelector("[data-outrage-listing]");
     var toggle = root.querySelector("[data-outrage-toggle-reviews]");
-    var actions = root.querySelector("[data-outrage-actions]");
-    var readAll = root.querySelector("[data-outrage-read-all]");
+    var panel = root.querySelector("[data-outrage-reviews-panel]");
     var hasReviews = Number(reviewCount || 0) > 0;
 
-    if (listing) listing.hidden = !(expanded && hasReviews);
+    if (listing) listing.hidden = !hasReviews;
+    if (panel) panel.hidden = !(expanded && hasReviews);
 
     if (toggle) {
-      toggle.textContent = "Hide reviews";
-      toggle.hidden = !(expanded && hasReviews);
-    }
-
-    if (actions) {
-      actions.hidden = expanded || !hasReviews;
-    }
-    if (readAll && hasReviews) {
-      readAll.textContent =
-        "Read all " + Number(reviewCount).toLocaleString() + " reviews";
+      toggle.hidden = !hasReviews;
+      toggle.textContent = expanded
+        ? "Hide reviews"
+        : "Read all " + Number(reviewCount).toLocaleString() + " reviews";
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
   }
 
@@ -262,8 +332,6 @@
     var reviewsList = root.querySelector("[data-outrage-reviews-list]");
     var loadMore = root.querySelector("[data-outrage-load-more]");
     var toggle = root.querySelector("[data-outrage-toggle-reviews]");
-    var readAll = root.querySelector("[data-outrage-read-all]");
-    var listing = root.querySelector("[data-outrage-listing]");
     var pageSize = Number(root.getAttribute("data-reviews-page-size") || 10);
     var starColor = root.getAttribute("data-star-color") || "#F5A623";
     var state = {
@@ -271,7 +339,7 @@
       hasMore: false,
       loading: false,
       failed: false,
-      expanded: true,
+      expanded: false,
       reviewCount: 0,
       loadedOnce: false,
     };
@@ -328,8 +396,6 @@
           loadMore.textContent = "Load more reviews";
         }
 
-        // Always show listing when published reviews exist
-        state.expanded = state.reviewCount > 0;
         syncToggleUi();
 
         root._outrageCustomerSay = {
@@ -346,28 +412,24 @@
           if (summaryText) summaryText.textContent = message;
           updateReviewsEmptyState(root, false);
           updateReviewsError(root, message);
-          state.expanded = true;
-          if (listing) listing.hidden = false;
-          if (toggle) {
-            toggle.hidden = false;
-            toggle.textContent = "Hide reviews";
-          }
         }
         if (loadMore) {
           loadMore.hidden = false;
           loadMore.disabled = false;
           loadMore.textContent = "Try again";
         }
+        syncToggleUi();
       } finally {
         state.loading = false;
       }
     }
 
     function toggleExpanded() {
-      if (state.reviewCount <= 0 && state.offset <= 0) return;
+      if (state.reviewCount <= 0 && !state.failed) return;
       state.expanded = !state.expanded;
       syncToggleUi();
-      if (state.expanded && !state.loadedOnce) {
+      if (state.expanded && (!state.loadedOnce || state.failed)) {
+        state.offset = 0;
         loadReviews(false);
       }
     }
@@ -384,9 +446,9 @@
     }
 
     if (toggle) toggle.addEventListener("click", toggleExpanded);
-    if (readAll) readAll.addEventListener("click", toggleExpanded);
     if (loadMore) loadMore.addEventListener("click", retryOrLoadMore);
 
+    // Load summary + review data, but keep the listing collapsed until Read all.
     await loadReviews(false);
   }
 

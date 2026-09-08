@@ -61,7 +61,7 @@
             {% if review_count > 0 %}{{ rating_value | round: 1 }}{% else %}—{% endif %}
           </p>
           <div data-outrage-score-stars>
-            {% render 'stars', rating: rating_value, size: 18, color: block.settings.star_color %}
+            {% render 'stars', rating: rating_value, size: 20, color: block.settings.star_color %}
           </div>
           <p class="or-customer-say__verified" data-outrage-verified-count>
             {% if review_count > 0 %}{{ review_count }} verified reviews{% else %}0 verified reviews{% endif %}
@@ -94,11 +94,11 @@
       <div class="or-customer-say__snippets" data-outrage-snippets hidden></div>
 
       <div class="or-customer-say__listing" data-outrage-listing hidden>
-        <button type="button" class="or-customer-say__toggle" data-outrage-toggle-reviews>
-          Hide reviews
+        <button type="button" class="or-customer-say__toggle" data-outrage-toggle-reviews hidden>
+          Read all reviews
         </button>
 
-        <div class="or-customer-say__reviews" data-outrage-reviews-panel>
+        <div class="or-customer-say__reviews" data-outrage-reviews-panel hidden>
           <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
           <p class="or-customer-say__reviews-empty" data-outrage-reviews-empty hidden>
             No published reviews yet.
@@ -108,12 +108,6 @@
             Load more reviews
           </button>
         </div>
-      </div>
-
-      <div class="or-customer-say__actions" data-outrage-actions hidden>
-        <button type="button" class="or-customer-say__read-all" data-outrage-read-all>
-          Read all reviews
-        </button>
       </div>
     </div>
   </section>

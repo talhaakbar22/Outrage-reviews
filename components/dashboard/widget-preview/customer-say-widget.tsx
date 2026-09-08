@@ -26,7 +26,7 @@ export function CustomerSayWidgetPreview({
   loadingMore?: boolean;
   compact?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   if (loading) {
     return (
@@ -68,31 +68,31 @@ export function CustomerSayWidgetPreview({
       }`}
     >
       <div className={`grid gap-6 ${compact ? "p-4" : "p-6 md:p-8"}`}>
-        <div className="grid gap-6 md:grid-cols-[120px_1fr] md:items-start">
+        <div className="grid gap-6 md:grid-cols-[9rem_1fr] md:items-start">
           <div className="space-y-2">
-            <p className="text-4xl font-semibold tracking-tight">
+            <p className="text-4xl font-bold tracking-tight md:text-5xl">
               {data.rating ? formatRating(Number(data.rating)) : "—"}
             </p>
             <StarRating rating={Math.round(Number(data.rating ?? 0))} />
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 md:text-base">
               {verifiedCount.toLocaleString()} verified review
               {verifiedCount === 1 ? "" : "s"}
             </p>
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-end">
+            <div className="flex justify-start md:justify-end">
               <button
                 type="button"
-                className="shrink-0 rounded-full border border-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
+                className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
               >
                 Write a review
               </button>
             </div>
-            <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+            <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
               {data.summaryText}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Summarised from {summarySourceCount.toLocaleString()} recent
               verified reviews{monthLabel ? ` • ${monthLabel}` : ""}
             </p>
@@ -166,34 +166,102 @@ export function CustomerSayWidgetPreview({
                 {reviews.length === 0 && loadingMore ? (
                   <p className="text-sm text-zinc-500">Loading reviews…</p>
                 ) : null}
-                {reviews.map((review) => (
-                  <article
-                    key={review.id}
-                    className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="font-medium text-zinc-950 dark:text-zinc-50">
-                        {review.reviewerName || "Customer"}
-                      </span>
-                      <StarRating rating={review.rating} />
-                      {review.isVerifiedPurchase ? (
-                        <span className="text-xs text-emerald-700 dark:text-emerald-300">
-                          Verified
-                        </span>
+                {reviews.map((review) => {
+                  const media = review.media ?? [];
+                  const first = media[0];
+                  const second = media[1];
+                  const showMoreOverlay = media.length > 2;
+
+                  return (
+                    <article
+                      key={review.id}
+                      className="flex items-start gap-4 rounded-xl border border-zinc-200 p-4 md:p-5 dark:border-zinc-800"
+                    >
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-base">
+                          <span className="font-semibold text-zinc-950 dark:text-zinc-50">
+                            {review.reviewerName || "Customer"}
+                          </span>
+                          <StarRating rating={review.rating} />
+                          {review.isVerifiedPurchase ? (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                              Verified
+                            </span>
+                          ) : null}
+                        </div>
+                        {review.title ? (
+                          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                            {review.title}
+                          </p>
+                        ) : null}
+                        {review.body ? (
+                          <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                            {review.body}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {media.length > 0 ? (
+                        <div className="flex shrink-0 gap-2">
+                          {[first, second].filter(Boolean).map((item, index) => {
+                            const src = item.thumbnailUrl || item.url;
+                            const isVideo = item.type
+                              .toLowerCase()
+                              .includes("video");
+                            const overlayMore =
+                              index === 1 && showMoreOverlay
+                                ? `+${media.length - 1} more`
+                                : null;
+
+                            return (
+                              <a
+                                key={item.id}
+                                href={item.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="relative h-24 w-24 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 md:h-28 md:w-28 dark:border-zinc-700 dark:bg-zinc-900"
+                                aria-label={
+                                  isVideo
+                                    ? "Open review video"
+                                    : "Open review photo"
+                                }
+                              >
+                                {isVideo ? (
+                                  <video
+                                    src={src}
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={src}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                )}
+                                {overlayMore ? (
+                                  <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+                                    {overlayMore}
+                                  </span>
+                                ) : isVideo ? (
+                                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+                                    <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white">
+                                      ▶ Video
+                                    </span>
+                                  </span>
+                                ) : null}
+                              </a>
+                            );
+                          })}
+                        </div>
                       ) : null}
-                    </div>
-                    {review.title ? (
-                      <p className="mt-2 font-medium text-zinc-900 dark:text-zinc-100">
-                        {review.title}
-                      </p>
-                    ) : null}
-                    {review.body ? (
-                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-                        {review.body}
-                      </p>
-                    ) : null}
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
 
                 {data.hasMoreReviews && onReadMore ? (
                   <button
