@@ -35,6 +35,26 @@
     }
   }
 
+  function formatReviewDate(iso) {
+    if (iso == null || iso === "") return "";
+    try {
+      var value = iso;
+      if (typeof iso === "object") {
+        if (iso.epochMilliseconds != null) value = Number(iso.epochMilliseconds);
+        else if (typeof iso.toString === "function") value = iso.toString();
+      }
+      var date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch (error) {
+      return "";
+    }
+  }
+
   function buildEndpoint(base, productId, params) {
     var url = new URL(base, window.location.origin);
     url.searchParams.set("product_id", String(productId));
@@ -169,6 +189,115 @@
     );
   }
 
+  function getStoreReplies(review) {
+    var list = [];
+    if (Array.isArray(review.replies) && review.replies.length) {
+      list = review.replies
+        .map(function (reply) {
+          return {
+            body: String(reply.body || "").trim(),
+            authorName: reply.authorName || reply.author_name || "Store team",
+            publishedAt: reply.publishedAt || reply.published_at || "",
+          };
+        })
+        .filter(function (reply) {
+          return Boolean(reply.body);
+        });
+    }
+
+    if (!list.length) {
+      var fallback = String(
+        review.merchantReply || review.merchant_reply || "",
+      ).trim();
+      if (fallback) {
+        list = [
+          {
+            body: fallback,
+            authorName: "Store team",
+            publishedAt:
+              review.merchantRepliedAt || review.merchant_replied_at || "",
+          },
+        ];
+      }
+    }
+
+    return list;
+  }
+
+  function renderMerchantReply(review) {
+    var replies = getStoreReplies(review);
+    if (!replies.length) return "";
+
+    var panelBody = replies
+      .map(function (reply) {
+        var repliedAt = formatReviewDate(reply.publishedAt);
+        return (
+          '<div class="or-customer-say__reply-item">' +
+          '<p class="or-customer-say__reply-label">' +
+          escapeHtml(reply.authorName || "Store reply") +
+          "</p>" +
+          '<p class="or-customer-say__reply-body">' +
+          escapeHtml(reply.body) +
+          "</p>" +
+          (repliedAt
+            ? '<time class="or-customer-say__reply-date" datetime="' +
+              escapeHtml(String(reply.publishedAt)) +
+              '">' +
+              escapeHtml(repliedAt) +
+              "</time>"
+            : "") +
+          "</div>"
+        );
+      })
+      .join("");
+
+    return (
+      '<div class="or-customer-say__reply-wrap has-reply">' +
+      '<button type="button" class="or-customer-say__reply-toggle" data-outrage-reply-toggle data-reply-count="' +
+      replies.length +
+      '" aria-expanded="false">' +
+      (replies.length > 1 ? "Replies (" + replies.length + ")" : "Reply") +
+      "</button>" +
+      '<div class="or-customer-say__reply is-collapsed" data-outrage-reply-panel hidden>' +
+      panelBody +
+      "</div></div>"
+    );
+  }
+
+  function bindReplyToggles(container) {
+    if (!container || container.getAttribute("data-outrage-reply-bound") === "true") {
+      return;
+    }
+    container.setAttribute("data-outrage-reply-bound", "true");
+    container.addEventListener("click", function (event) {
+      var target = event.target;
+      var button =
+        target && target.closest
+          ? target.closest("[data-outrage-reply-toggle]")
+          : null;
+      if (!button || !container.contains(button)) return;
+
+      var wrap = button.closest(".or-customer-say__reply-wrap");
+      var panel = wrap
+        ? wrap.querySelector("[data-outrage-reply-panel]")
+        : null;
+      if (!panel) return;
+
+      var open = panel.hidden;
+      panel.hidden = !open;
+      panel.classList.toggle("is-collapsed", !open);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      var count = Number(button.getAttribute("data-reply-count") || 1);
+      button.textContent = open
+        ? count > 1
+          ? "Hide replies"
+          : "Hide reply"
+        : count > 1
+          ? "Replies (" + count + ")"
+          : "Reply";
+    });
+  }
+
   function renderReviews(container, reviews, starColor) {
     if (!reviews || !reviews.length) {
       return false;
@@ -177,21 +306,37 @@
     var html = reviews
       .map(function (review) {
         var hasMedia = review.media && review.media.length > 0;
+        var dateRaw =
+          review.publishedAt ||
+          review.published_at ||
+          review.createdAt ||
+          review.created_at ||
+          "";
+        var dateLabel = formatReviewDate(dateRaw);
         return (
           '<article class="or-customer-say__review-card' +
           (hasMedia ? " has-media" : "") +
           '">' +
           '<div class="or-customer-say__review-main">' +
-          '<div class="or-customer-say__review-top">' +
+          '<div class="or-customer-say__review-header">' +
           '<div class="or-customer-say__review-identity">' +
           '<span class="or-customer-say__review-name">' +
           escapeHtml(review.reviewerName || "Customer") +
           "</span>" +
+          (dateLabel
+            ? '<time class="or-customer-say__review-date" datetime="' +
+              escapeHtml(String(dateRaw)) +
+              '">' +
+              escapeHtml(dateLabel) +
+              "</time>"
+            : "") +
           (review.isVerifiedPurchase
             ? '<span class="or-customer-say__verified-badge">Verified</span>'
             : "") +
           "</div>" +
+          '<div class="or-customer-say__review-stars">' +
           starsHtml(review.rating, starColor) +
+          "</div>" +
           "</div>" +
           (review.title
             ? '<p class="or-customer-say__review-title">' +
@@ -203,6 +348,7 @@
               escapeHtml(review.body) +
               "</p>"
             : "") +
+          renderMerchantReply(review) +
           "</div>" +
           renderReviewMedia(review.media) +
           "</article>"
@@ -232,20 +378,30 @@
   }
 
   function setListingExpanded(root, expanded, reviewCount) {
+    var actions = root.querySelector("[data-outrage-actions]");
     var listing = root.querySelector("[data-outrage-listing]");
-    var toggle = root.querySelector("[data-outrage-toggle-reviews]");
-    var panel = root.querySelector("[data-outrage-reviews-panel]");
+    var readAll = root.querySelector("[data-outrage-toggle-reviews]");
+    var hideBtn = root.querySelector("[data-outrage-hide-reviews]");
     var hasReviews = Number(reviewCount || 0) > 0;
 
-    if (listing) listing.hidden = !hasReviews;
-    if (panel) panel.hidden = !(expanded && hasReviews);
-
-    if (toggle) {
-      toggle.hidden = !hasReviews;
-      toggle.textContent = expanded
-        ? "Hide reviews"
-        : "Read all " + Number(reviewCount).toLocaleString() + " reviews";
-      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    // Collapsed: only "Read all N reviews"
+    // Expanded: "Hide reviews" + review cards
+    if (actions) {
+      actions.hidden = !(hasReviews && !expanded);
+      actions.classList.toggle("is-visible", hasReviews && !expanded);
+    }
+    if (listing) {
+      listing.hidden = !(hasReviews && expanded);
+      listing.classList.toggle("is-collapsed", !(hasReviews && expanded));
+      listing.classList.toggle("is-expanded", hasReviews && expanded);
+    }
+    if (readAll && hasReviews) {
+      readAll.textContent =
+        "Read all " + Number(reviewCount).toLocaleString() + " reviews";
+      readAll.setAttribute("aria-expanded", "false");
+    }
+    if (hideBtn) {
+      hideBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
   }
 
@@ -331,7 +487,6 @@
   async function hydrate(root) {
     var reviewsList = root.querySelector("[data-outrage-reviews-list]");
     var loadMore = root.querySelector("[data-outrage-load-more]");
-    var toggle = root.querySelector("[data-outrage-toggle-reviews]");
     var pageSize = Number(root.getAttribute("data-reviews-page-size") || 10);
     var starColor = root.getAttribute("data-star-color") || "#F5A623";
     var state = {
@@ -346,6 +501,17 @@
 
     function syncToggleUi() {
       setListingExpanded(root, state.expanded, state.reviewCount);
+      if (loadMore) {
+        if (state.failed && state.expanded) {
+          loadMore.hidden = false;
+          loadMore.disabled = false;
+          loadMore.textContent = "Try again";
+        } else if (!state.loading) {
+          loadMore.hidden = !(state.expanded && state.hasMore);
+          loadMore.disabled = false;
+          if (!state.failed) loadMore.textContent = "Load more reviews";
+        }
+      }
     }
 
     async function loadReviews(append) {
@@ -353,7 +519,7 @@
       state.loading = true;
       state.failed = false;
       updateReviewsError(root, null);
-      if (loadMore) {
+      if (loadMore && state.expanded) {
         loadMore.hidden = false;
         loadMore.disabled = true;
         loadMore.textContent = "Loading…";
@@ -380,6 +546,7 @@
         if (reviewsList) {
           if (!append) reviewsList.innerHTML = "";
           renderReviews(reviewsList, batch, starColor);
+          bindReplyToggles(reviewsList);
           if (!append) {
             updateReviewsEmptyState(root, batch.length === 0);
           }
@@ -391,7 +558,7 @@
         state.reviewCount = Math.max(state.reviewCount, state.offset);
 
         if (loadMore) {
-          loadMore.hidden = !state.hasMore;
+          loadMore.hidden = !(state.expanded && state.hasMore);
           loadMore.disabled = false;
           loadMore.textContent = "Load more reviews";
         }
@@ -424,14 +591,19 @@
       }
     }
 
-    function toggleExpanded() {
+    function openReviews() {
       if (state.reviewCount <= 0 && !state.failed) return;
-      state.expanded = !state.expanded;
+      state.expanded = true;
       syncToggleUi();
-      if (state.expanded && (!state.loadedOnce || state.failed)) {
+      if (!state.loadedOnce || state.failed) {
         state.offset = 0;
         loadReviews(false);
       }
+    }
+
+    function closeReviews() {
+      state.expanded = false;
+      syncToggleUi();
     }
 
     function retryOrLoadMore() {
@@ -445,11 +617,16 @@
       }
     }
 
-    if (toggle) toggle.addEventListener("click", toggleExpanded);
+    var readAll = root.querySelector("[data-outrage-toggle-reviews]");
+    var hideBtn = root.querySelector("[data-outrage-hide-reviews]");
+    if (readAll) readAll.addEventListener("click", openReviews);
+    if (hideBtn) hideBtn.addEventListener("click", closeReviews);
     if (loadMore) loadMore.addEventListener("click", retryOrLoadMore);
 
-    // Load summary + review data, but keep the listing collapsed until Read all.
+    // Keep reviews collapsed until the shopper presses Read all.
     await loadReviews(false);
+    state.expanded = false;
+    syncToggleUi();
   }
 
   function init() {

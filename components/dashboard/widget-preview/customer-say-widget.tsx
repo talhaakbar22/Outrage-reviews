@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatRating, StarRating } from "@/components/dashboard/review-ui";
+import { formatRating, formatReviewDate, StarRating } from "@/components/dashboard/review-ui";
 import { normalizeCustomerSayPayload } from "@/lib/customer-say";
 
 export type CustomerSayData = import("@/lib/customer-say").CustomerSayViewModel;
@@ -11,6 +11,64 @@ function formatMonthLabel(iso: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+function ReplyToggle({
+  replies,
+}: {
+  replies: Array<{
+    body: string;
+    authorName?: string | null;
+    publishedAt?: string | null;
+  }>;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!replies.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="text-sm font-semibold text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
+      >
+        {open
+          ? replies.length > 1
+            ? "Hide replies"
+            : "Hide reply"
+          : replies.length > 1
+            ? `Replies (${replies.length})`
+            : "Reply"}
+      </button>
+      {open ? (
+        <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 dark:border-zinc-800 dark:bg-zinc-900/70">
+          {replies.map((reply, index) => (
+            <div
+              key={`${reply.publishedAt ?? "reply"}-${index}`}
+              className={
+                index > 0
+                  ? "border-t border-zinc-200 pt-3 dark:border-zinc-700"
+                  : undefined
+              }
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {reply.authorName || "Store reply"}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                {reply.body}
+              </p>
+              {reply.publishedAt ? (
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {formatReviewDate(reply.publishedAt)}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function CustomerSayWidgetPreview({
@@ -141,140 +199,171 @@ export function CustomerSayWidgetPreview({
           </div>
         ) : null}
 
-        {reviewCount > 0 ? (
-          <div className="space-y-4">
+        {reviewCount > 0 && !showExpanded ? (
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(true);
+              if (reviews.length === 0 && onReadMore) onReadMore();
+            }}
+            className="justify-self-start text-sm font-medium text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
+          >
+            {`Read all ${reviewCount.toLocaleString()} reviews`}
+          </button>
+        ) : null}
+
+        {reviewCount > 0 && showExpanded ? (
+          <div className="space-y-3">
             <button
               type="button"
-              onClick={() => {
-                setExpanded((value) => {
-                  const next = !value;
-                  if (next && reviews.length === 0 && onReadMore) {
-                    onReadMore();
-                  }
-                  return next;
-                });
-              }}
-              className="text-sm font-medium text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
+              onClick={() => setExpanded(false)}
+              className="justify-self-start text-sm font-medium text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
             >
-              {showExpanded
-                ? "Hide reviews"
-                : `Read all ${reviewCount.toLocaleString()} reviews`}
+              Hide reviews
             </button>
 
-            {showExpanded ? (
-              <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                {reviews.length === 0 && loadingMore ? (
-                  <p className="text-sm text-zinc-500">Loading reviews…</p>
-                ) : null}
-                {reviews.map((review) => {
-                  const media = review.media ?? [];
-                  const first = media[0];
-                  const second = media[1];
-                  const showMoreOverlay = media.length > 2;
+            <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              {reviews.length === 0 && loadingMore ? (
+                <p className="text-sm text-zinc-500">Loading reviews…</p>
+              ) : null}
+              {reviews.map((review) => {
+                const media = review.media ?? [];
+                const first = media[0];
+                const second = media[1];
+                const showMoreOverlay = media.length > 2;
+                const dateLabel = formatReviewDate(
+                  review.publishedAt || review.createdAt || "",
+                );
 
-                  return (
-                    <article
-                      key={review.id}
-                      className="flex items-start gap-4 rounded-xl border border-zinc-200 p-4 md:p-5 dark:border-zinc-800"
-                    >
-                      <div className="min-w-0 flex-1 space-y-2">
+                return (
+                  <article
+                    key={review.id}
+                    className="flex flex-nowrap items-start gap-3 rounded-xl border border-zinc-200 p-4 md:gap-4 md:p-5 dark:border-zinc-800"
+                  >
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2 text-base">
                           <span className="font-semibold text-zinc-950 dark:text-zinc-50">
                             {review.reviewerName || "Customer"}
                           </span>
-                          <StarRating rating={review.rating} />
+                          {dateLabel ? (
+                            <time className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                              {dateLabel}
+                            </time>
+                          ) : null}
                           {review.isVerifiedPurchase ? (
                             <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                               Verified
                             </span>
                           ) : null}
                         </div>
-                        {review.title ? (
-                          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                            {review.title}
-                          </p>
-                        ) : null}
-                        {review.body ? (
-                          <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-                            {review.body}
-                          </p>
-                        ) : null}
+                        <StarRating rating={review.rating} />
                       </div>
-
-                      {media.length > 0 ? (
-                        <div className="flex shrink-0 gap-2">
-                          {[first, second].filter(Boolean).map((item, index) => {
-                            const src = item.thumbnailUrl || item.url;
-                            const isVideo = item.type
-                              .toLowerCase()
-                              .includes("video");
-                            const overlayMore =
-                              index === 1 && showMoreOverlay
-                                ? `+${media.length - 1} more`
-                                : null;
-
-                            return (
-                              <a
-                                key={item.id}
-                                href={item.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="relative h-24 w-24 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 md:h-28 md:w-28 dark:border-zinc-700 dark:bg-zinc-900"
-                                aria-label={
-                                  isVideo
-                                    ? "Open review video"
-                                    : "Open review photo"
-                                }
-                              >
-                                {isVideo ? (
-                                  <video
-                                    src={src}
-                                    muted
-                                    playsInline
-                                    preload="metadata"
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={src}
-                                    alt=""
-                                    className="h-full w-full object-cover"
-                                    loading="lazy"
-                                  />
-                                )}
-                                {overlayMore ? (
-                                  <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
-                                    {overlayMore}
-                                  </span>
-                                ) : isVideo ? (
-                                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
-                                    <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white">
-                                      ▶ Video
-                                    </span>
-                                  </span>
-                                ) : null}
-                              </a>
-                            );
-                          })}
-                        </div>
+                      {review.title ? (
+                        <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                          {review.title}
+                        </p>
                       ) : null}
-                    </article>
-                  );
-                })}
+                      {review.body ? (
+                        <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                          {review.body}
+                        </p>
+                      ) : null}
+                      {(() => {
+                        const storeReplies = (review.replies ?? [])
+                          .map((reply) => ({
+                            body: String(reply.body ?? "").trim(),
+                            authorName: reply.authorName ?? "Store team",
+                            publishedAt: reply.publishedAt ?? null,
+                          }))
+                          .filter((reply) => reply.body.length > 0);
+                        if (
+                          storeReplies.length === 0 &&
+                          review.merchantReply?.trim()
+                        ) {
+                          storeReplies.push({
+                            body: review.merchantReply.trim(),
+                            authorName: "Store team",
+                            publishedAt: review.merchantRepliedAt ?? null,
+                          });
+                        }
+                        return <ReplyToggle replies={storeReplies} />;
+                      })()}
+                    </div>
 
-                {data.hasMoreReviews && onReadMore ? (
-                  <button
-                    type="button"
-                    disabled={loadingMore}
-                    onClick={onReadMore}
-                    className="btn-secondary"
-                  >
-                    {loadingMore ? "Loading…" : "Load more reviews"}
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
+                    {media.length > 0 ? (
+                      <div className="ml-auto flex shrink-0 gap-2">
+                        {[first, second].filter(Boolean).map((item, index) => {
+                          const src = item.thumbnailUrl || item.url;
+                          const isVideo = item.type
+                            .toLowerCase()
+                            .includes("video");
+                          const overlayMore =
+                            index === 1 && showMoreOverlay
+                              ? `+${media.length - 1} more`
+                              : null;
+
+                          return (
+                            <a
+                              key={item.id}
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="relative h-16 w-16 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 sm:h-24 sm:w-24 md:h-28 md:w-28 dark:border-zinc-700 dark:bg-zinc-900"
+                              aria-label={
+                                isVideo
+                                  ? "Open review video"
+                                  : "Open review photo"
+                              }
+                            >
+                              {isVideo ? (
+                                <video
+                                  src={src}
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={src}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              )}
+                              {overlayMore ? (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+                                  {overlayMore}
+                                </span>
+                              ) : isVideo ? (
+                                <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+                                  <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white">
+                                    ▶ Video
+                                  </span>
+                                </span>
+                              ) : null}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+
+              {data.hasMoreReviews && onReadMore ? (
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={onReadMore}
+                  className="btn-secondary"
+                >
+                  {loadingMore ? "Loading…" : "Load more reviews"}
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

@@ -33,6 +33,13 @@ export type CustomerSayViewModel = {
     publishedAt?: string | null;
     createdAt?: string;
     productTitle?: string | null;
+    merchantReply?: string | null;
+    merchantRepliedAt?: string | null;
+    replies?: Array<{
+      body: string;
+      authorName?: string | null;
+      publishedAt?: string | null;
+    }>;
     media?: Array<{
       id: string;
       url: string;

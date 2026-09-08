@@ -9,6 +9,13 @@ export type StorefrontReview = {
   isVerifiedPurchase: boolean;
   publishedAt: string | null;
   createdAt: string;
+  merchantReply: string | null;
+  merchantRepliedAt: string | null;
+  replies: Array<{
+    body: string;
+    authorName: string | null;
+    publishedAt: string | null;
+  }>;
   media: Array<{
     id: string;
     url: string;
@@ -59,6 +66,11 @@ export async function listPublishedReviewsForShopifyProduct(input: {
         .select("id", "url", "thumbnailUrl", "type", "sortOrder")
         .orderBy((item) => item.sortOrder.asc()),
     )
+    .include("replies", (replies) =>
+      replies
+        .select("id", "body", "authorName", "publishedAt")
+        .orderBy((item) => item.publishedAt.desc()),
+    )
     .orderBy((review) => review.publishedAt.desc())
     .offset(offset)
     .limit(limit)
@@ -73,8 +85,21 @@ export async function listPublishedReviewsForShopifyProduct(input: {
     rating: product.avgRating,
     count: product.reviewCount,
     ratingBreakdown: (product.ratingBreakdown as Record<string, number> | null) ?? null,
-    reviews: reviews.map(
-      (review): StorefrontReview => ({
+    reviews: reviews.map((review): StorefrontReview => {
+      const replies = [...(review.replies ?? [])]
+        .map((reply) => ({
+          body: reply.body.trim(),
+          authorName: reply.authorName,
+          publishedAt: toIsoString(reply.publishedAt),
+        }))
+        .filter((reply) => reply.body.length > 0);
+      const merchantReply =
+        review.merchantReply?.trim() || replies[0]?.body || null;
+      const merchantRepliedAt = merchantReply
+        ? toIsoString(review.merchantRepliedAt) || replies[0]?.publishedAt || null
+        : null;
+
+      return {
         id: review.id,
         rating: review.rating,
         title: review.title,
@@ -83,6 +108,9 @@ export async function listPublishedReviewsForShopifyProduct(input: {
         isVerifiedPurchase: review.isVerifiedPurchase,
         publishedAt: toIsoString(review.publishedAt),
         createdAt: toIsoString(review.createdAt) ?? "",
+        merchantReply,
+        merchantRepliedAt,
+        replies,
         media: [...review.media]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((item) => ({
@@ -91,7 +119,7 @@ export async function listPublishedReviewsForShopifyProduct(input: {
             thumbnailUrl: item.thumbnailUrl,
             type: item.type,
           })),
-      }),
-    ),
+      };
+    }),
   };
 }

@@ -91,6 +91,39 @@
               "</div>"
             : "";
 
+        var replyList = Array.isArray(review.replies)
+          ? review.replies
+              .map(function (item) {
+                return String(item.body || "").trim();
+              })
+              .filter(Boolean)
+          : [];
+        if (
+          !replyList.length &&
+          review.merchantReply &&
+          String(review.merchantReply).trim()
+        ) {
+          replyList = [String(review.merchantReply).trim()];
+        }
+
+        var reply = replyList.length
+          ? '<div class="or-review__reply">' +
+            replyList
+              .map(function (body, index) {
+                return (
+                  (index > 0
+                    ? '<hr class="or-review__reply-divider" />'
+                    : "") +
+                  '<p class="or-review__reply-label">Store reply</p>' +
+                  '<p class="or-review__reply-body">' +
+                  escapeHtml(body) +
+                  "</p>"
+                );
+              })
+              .join("") +
+            "</div>"
+          : "";
+
         return (
           '<article class="or-review">' +
           '<div class="or-review__top">' +
@@ -108,6 +141,7 @@
           (review.body
             ? '<p class="or-review__body">' + escapeHtml(review.body) + "</p>"
             : "") +
+          reply +
           media +
           "</article>"
         );

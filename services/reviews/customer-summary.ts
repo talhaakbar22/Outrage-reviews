@@ -1,4 +1,4 @@
-import { getDb, nowInstant, toIsoString } from "@/lib/prisma";
+import { getDb, nowInstant, toIsoString, type DbInstant } from "@/lib/prisma";
 import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
 import { ensureProductSynced } from "@/services/products/ensure-synced";
 
@@ -13,6 +13,12 @@ export type SummarySnippet = {
   reviewerName: string | null;
   rating: number;
   isVerifiedPurchase: boolean;
+};
+
+export type CustomerSayStoreReply = {
+  body: string;
+  authorName: string | null;
+  publishedAt: string | null;
 };
 
 export type CustomerSayPayload = {
@@ -36,6 +42,9 @@ export type CustomerSayPayload = {
     publishedAt: string | null;
     createdAt: string;
     productTitle: string | null;
+    merchantReply: string | null;
+    merchantRepliedAt: string | null;
+    replies: CustomerSayStoreReply[];
     media: Array<{
       id: string;
       url: string;
@@ -85,6 +94,54 @@ function truncateQuote(text: string, max = 110) {
   const slice = cleaned.slice(0, max);
   const lastSpace = slice.lastIndexOf(" ");
   return `${(lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trim()}…`;
+}
+
+function mapStoreReplies(
+  replies: Array<{
+    body: string;
+    authorName: string | null;
+    publishedAt: DbInstant | Date | string | null;
+  }>,
+): CustomerSayStoreReply[] {
+  return [...replies]
+    .map((reply) => ({
+      body: reply.body.trim(),
+      authorName: reply.authorName,
+      publishedAt: toIsoString(reply.publishedAt),
+    }))
+    .filter((reply) => reply.body.length > 0)
+    .sort((a, b) => {
+      const aTime = a.publishedAt ? Date.parse(a.publishedAt) : 0;
+      const bTime = b.publishedAt ? Date.parse(b.publishedAt) : 0;
+      return bTime - aTime;
+    });
+}
+
+function resolveMerchantReply(
+  merchantReply: string | null,
+  merchantRepliedAt: DbInstant | Date | string | null | undefined,
+  replies: CustomerSayStoreReply[],
+) {
+  const fromColumn = merchantReply?.trim() || null;
+  if (fromColumn) {
+    return {
+      merchantReply: fromColumn,
+      merchantRepliedAt: toIsoString(merchantRepliedAt),
+    };
+  }
+
+  const latest = replies[0];
+  if (!latest) {
+    return {
+      merchantReply: null as string | null,
+      merchantRepliedAt: null as string | null,
+    };
+  }
+
+  return {
+    merchantReply: latest.body,
+    merchantRepliedAt: latest.publishedAt,
+  };
 }
 
 function firstSentence(text: string) {
@@ -234,30 +291,47 @@ export async function buildCustomerSayPayload(input: {
           .select("id", "url", "thumbnailUrl", "type", "sortOrder")
           .orderBy((item) => item.sortOrder.asc()),
       )
+      .include("replies", (replies) =>
+        replies
+          .select("id", "body", "authorName", "publishedAt")
+          .orderBy((item) => item.publishedAt.desc()),
+      )
       .orderBy((review) => review.publishedAt.desc())
       .offset(reviewsOffset)
       .limit(reviewsLimit)
       .all();
 
-    reviews = rows.map((review) => ({
-      id: review.id,
-      rating: review.rating,
-      title: review.title,
-      body: review.body,
-      reviewerName: review.reviewerName,
-      isVerifiedPurchase: review.isVerifiedPurchase,
-      publishedAt: toIsoString(review.publishedAt),
-      createdAt: toIsoString(review.createdAt) ?? "",
-      productTitle: product.title,
-      media: [...review.media]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((item) => ({
-          id: item.id,
-          url: item.url,
-          thumbnailUrl: item.thumbnailUrl,
-          type: item.type,
-        })),
-    }));
+    reviews = rows.map((review) => {
+      const replies = mapStoreReplies(review.replies ?? []);
+      const storeReply = resolveMerchantReply(
+        review.merchantReply ?? null,
+        review.merchantRepliedAt,
+        replies,
+      );
+
+      return {
+        id: review.id,
+        rating: review.rating,
+        title: review.title,
+        body: review.body,
+        reviewerName: review.reviewerName,
+        isVerifiedPurchase: review.isVerifiedPurchase,
+        publishedAt: toIsoString(review.publishedAt),
+        createdAt: toIsoString(review.createdAt) ?? "",
+        productTitle: product.title,
+        merchantReply: storeReply.merchantReply,
+        merchantRepliedAt: storeReply.merchantRepliedAt,
+        replies,
+        media: [...review.media]
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((item) => ({
+            id: item.id,
+            url: item.url,
+            thumbnailUrl: item.thumbnailUrl,
+            type: item.type,
+          })),
+      };
+    });
 
     reviewsTotal = publishedCount;
   }
@@ -353,6 +427,21 @@ export function normalizeCustomerSayPayload(
     ...normalized,
     reviews: normalized.reviews.map((review) => {
       const extended = review as CustomerSayPayload["reviews"][number];
+      const replies = Array.isArray(extended.replies)
+        ? extended.replies
+            .map((reply) => ({
+              body: String(reply.body ?? "").trim(),
+              authorName: reply.authorName ?? null,
+              publishedAt: reply.publishedAt ?? null,
+            }))
+            .filter((reply) => reply.body.length > 0)
+        : [];
+      const storeReply = resolveMerchantReply(
+        extended.merchantReply ?? null,
+        extended.merchantRepliedAt,
+        replies,
+      );
+
       return {
         id: review.id,
         rating: review.rating,
@@ -363,6 +452,9 @@ export function normalizeCustomerSayPayload(
         publishedAt: review.publishedAt ?? null,
         createdAt: toIsoString(review.createdAt) ?? new Date().toISOString(),
         productTitle: extended.productTitle ?? null,
+        merchantReply: storeReply.merchantReply,
+        merchantRepliedAt: storeReply.merchantRepliedAt,
+        replies,
         media: extended.media ?? [],
       };
     }),
