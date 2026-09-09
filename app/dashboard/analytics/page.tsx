@@ -65,7 +65,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                 <span className="text-zinc-600 dark:text-zinc-400">{item.rating}★</span>
                 <div className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900">
                   <div
-                    className="h-full rounded-full bg-amber-400"
+                    className="h-full rounded-full bg-zinc-900 dark:bg-zinc-100"
                     style={{ width: `${(item.count / maxRatingCount) * 100}%` }}
                   />
                 </div>

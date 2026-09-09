@@ -1,7 +1,10 @@
 (function () {
   function starsHtml(rating) {
     var value = Math.max(0, Math.min(5, Number(rating) || 0));
-    var html = '<span class="or-star-row" role="img" aria-label="' + value.toFixed(1) + ' out of 5 stars">';
+    var html =
+      '<span class="or-star-row" style="--or-star-color:#18181B" role="img" aria-label="' +
+      value.toFixed(1) +
+      ' out of 5 stars">';
     for (var i = 1; i <= 5; i += 1) {
       var cls = i <= Math.round(value) ? "or-star or-star--full" : "or-star or-star--empty";
       html += '<span class="' + cls + '" aria-hidden="true">★</span>';

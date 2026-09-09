@@ -197,7 +197,7 @@ export function ReviewSubmissionForm({ token }: { token: string }) {
               onClick={() => setRating(value)}
               className={`h-10 w-10 rounded-full border text-sm font-medium ${
                 rating >= value
-                  ? "border-amber-400 bg-amber-100 text-amber-900"
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
                   : "border-zinc-300 text-zinc-500 dark:border-zinc-700"
               }`}
             >

@@ -1,7 +1,7 @@
 .or-stars,
 .or-summary,
 .or-reviews {
-  --or-star-color: #f5a623;
+  --or-star-color: #18181b;
   --or-star-size: 16px;
   --or-text: #18181b;
   --or-muted: #71717a;
@@ -888,8 +888,8 @@ body.or-review-modal-open {
   --or-rm-surface: #fffcf8;
   --or-rm-accent: #0f766e;
   --or-rm-accent-soft: #ccfbf1;
-  --or-rm-star: #ca8a04;
-  --or-rm-star-empty: #d6d3d1;
+  --or-rm-star: #18181b;
+  --or-rm-star-empty: #d4d4d8;
   --or-rm-danger: #b91c1c;
   position: fixed;
   inset: 0;
@@ -1958,7 +1958,7 @@ body.or-review-modal-open {
 }
 
 .or-review-modal__thanks-star.is-active {
-  color: #ca8a04;
+  color: #18181b;
 }
 
 .or-review-modal__thanks-rating-text {

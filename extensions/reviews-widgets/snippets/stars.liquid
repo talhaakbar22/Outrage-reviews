@@ -3,7 +3,7 @@
   assign safe_rating = rating | default: 0 | times: 1.0
   assign rounded = safe_rating | times: 2 | round | divided_by: 2.0
   assign star_size = size | default: 16
-  assign star_color = color | default: '#F5A623'
+  assign star_color = color | default: '#18181B'
 %}
 
 <span

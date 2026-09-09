@@ -1,23 +1,11 @@
-export function StarRating({
-  rating,
-  tone = "amber",
-}: {
-  rating: number;
-  tone?: "amber" | "dark";
-}) {
-  const filled =
-    tone === "dark"
-      ? "text-zinc-900 dark:text-zinc-100"
-      : "text-amber-500";
-  const empty =
-    tone === "dark"
-      ? "text-zinc-300 dark:text-zinc-600"
-      : "text-zinc-300 dark:text-zinc-700";
-
+export function StarRating({ rating }: { rating: number }) {
   return (
-    <span className={`tracking-tight ${filled}`} aria-label={`${rating} out of 5 stars`}>
+    <span
+      className="tracking-tight text-zinc-900 dark:text-zinc-100"
+      aria-label={`${rating} out of 5 stars`}
+    >
       {"★".repeat(Math.max(0, Math.min(5, rating)))}
-      <span className={empty}>
+      <span className="text-zinc-300 dark:text-zinc-600">
         {"★".repeat(Math.max(0, 5 - Math.max(0, Math.min(5, rating))))}
       </span>
     </span>

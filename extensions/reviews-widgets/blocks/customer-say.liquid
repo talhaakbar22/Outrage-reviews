@@ -61,7 +61,7 @@
             {% if review_count > 0 %}{{ rating_value | round: 1 }}{% else %}—{% endif %}
           </p>
           <div data-outrage-score-stars>
-            {% render 'stars', rating: rating_value, size: 20, color: block.settings.star_color %}
+            {% render 'stars', rating: rating_value, size: 20, color: '#18181B' %}
           </div>
           <p class="or-customer-say__verified" data-outrage-verified-count>
             {% if review_count > 0 %}{{ review_count }} approved reviews{% else %}0 approved reviews{% endif %}

@@ -29,7 +29,7 @@
     {{ block.shopify_attributes }}
   >
     <div class="or-summary__hero">
-      {% render 'stars', rating: rating_value, size: 22, color: block.settings.star_color %}
+      {% render 'stars', rating: rating_value, size: 22, color: '#18181B' %}
       <p class="or-summary__average">{{ rating_value | round: 1 }} out of 5</p>
       <p class="or-summary__count">Based on {{ review_count }} {% if review_count == 1 %}review{% else %}reviews{% endif %}</p>
     </div>
@@ -47,7 +47,7 @@
           <li class="or-summary__row">
             <span class="or-summary__label">{{ star }}★</span>
             <span class="or-summary__track" aria-hidden="true">
-              <span class="or-summary__fill" style="width: {{ width }}%; background: {{ block.settings.star_color }};"></span>
+              <span class="or-summary__fill" style="width: {{ width }}%; background: #18181B;"></span>
             </span>
             <span class="or-summary__value">{{ star_count }}</span>
           </li>
@@ -78,7 +78,7 @@
       "type": "color",
       "id": "star_color",
       "label": "Star color",
-      "default": "#F5A623"
+      "default": "#18181B"
     },
     {
       "type": "checkbox",
