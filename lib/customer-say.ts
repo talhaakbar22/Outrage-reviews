@@ -68,13 +68,103 @@ export function isPlaceholderCustomerSummary(text: string | null | undefined) {
   if (value.includes("no approved reviews yet") && !value.includes("shoppers")) {
     return true;
   }
+  if (value.includes("mention “") || value.includes('mention "')) return true;
   return false;
+}
+
+const KEYWORD_STOPWORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "to",
+  "of",
+  "for",
+  "in",
+  "on",
+  "it",
+  "is",
+  "was",
+  "i",
+  "me",
+  "my",
+  "we",
+  "you",
+  "this",
+  "that",
+  "with",
+  "very",
+  "just",
+  "one",
+  "would",
+  "like",
+  "really",
+]);
+
+function averageReviewTone(ratings: number[]) {
+  if (ratings.length === 0) return "positive";
+  const avg =
+    ratings.reduce((total, rating) => total + rating, 0) / ratings.length;
+  if (avg >= 4.5) return "very positive";
+  if (avg >= 3.5) return "positive";
+  if (avg >= 2.5) return "mixed";
+  return "critical";
+}
+
+function extractSummaryKeywords(texts: Array<string | null | undefined>) {
+  const counts = new Map<string, number>();
+  for (const text of texts) {
+    const tokens = (text ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/);
+    for (const token of tokens) {
+      if (token.length < 3) continue;
+      if (KEYWORD_STOPWORDS.has(token)) continue;
+      if (!/[aeiou]/.test(token)) continue;
+      counts.set(token, (counts.get(token) ?? 0) + 1);
+    }
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 4)
+    .map(([token]) => token);
+}
+
+function themeSentence(keywords: string[]) {
+  const hasPraise = keywords.some((word) =>
+    /nice|good|great|love|excellent|amazing/.test(word),
+  );
+  const hasRepurchase = keywords.some((word) =>
+    /buy|again|repeat|return/.test(word),
+  );
+  const hasGift = keywords.some((word) => /gift|present/.test(word));
+
+  if (hasPraise && hasRepurchase) {
+    return "The short comments point to a likeable product that some shoppers would purchase again.";
+  }
+  if (hasPraise) {
+    return "The short comments point to a likeable product, even when people only leave a word or two.";
+  }
+  if (hasRepurchase) {
+    return "A recurring theme is that some shoppers would come back for another purchase.";
+  }
+  if (hasGift) {
+    return "Gift-giving comes up as a theme, more than a long product breakdown.";
+  }
+  if (keywords.length > 0) {
+    return "The written comments are brief, so this summary follows the ratings and a few repeated themes rather than copying what people typed.";
+  }
+  return "Most comments are very short, so this summary follows the star ratings more than detailed write-ups.";
 }
 
 export function buildFallbackCustomerSummary(input: {
   productTitle?: string | null;
   reviewCount: number;
   quotes: Array<string | null | undefined>;
+  ratings?: number[];
 }) {
   const subject = input.productTitle
     ? `the ${input.productTitle}`
@@ -83,21 +173,22 @@ export function buildFallbackCustomerSummary(input: {
     return "No approved reviews yet. Once reviews are approved, a summary will appear here.";
   }
 
-  const quotes = input.quotes
-    .map((quote) => (quote ?? "").replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .slice(0, 4);
-
-  if (quotes.length === 0) {
-    return `Customers have ${input.reviewCount} approved review${
+  const tone = averageReviewTone(input.ratings ?? []);
+  const keywords = extractSummaryKeywords(input.quotes);
+  const lines = [
+    `Customers have left ${input.reviewCount} approved review${
       input.reviewCount === 1 ? "" : "s"
-    } of ${subject}. Written comments will appear in this summary as soon as shoppers add them.`;
+    } of ${subject}, and the overall tone is ${tone}.`,
+    themeSentence(keywords),
+  ];
+
+  if (tone === "mixed" || tone === "critical") {
+    lines.push(
+      "A few scores are more reserved, so the picture is useful rather than perfect.",
+    );
   }
 
-  const quoted = quotes.map((quote) => `“${quote}”`).join(" ");
-  return `Shoppers reviewing ${subject} mention ${quoted} Across ${
-    input.reviewCount
-  } approved review${input.reviewCount === 1 ? "" : "s"}.`;
+  return lines.slice(0, 3).join(" ");
 }
 
 export function normalizeCustomerSayPayload(

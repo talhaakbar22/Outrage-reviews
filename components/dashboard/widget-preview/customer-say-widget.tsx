@@ -128,6 +128,7 @@ export function CustomerSayWidgetPreview({
           quotes: (data.reviews ?? []).map(
             (review) => review.body || review.title,
           ),
+          ratings: (data.reviews ?? []).map((review) => Number(review.rating ?? 0)),
         })
       : data.summaryText;
   const highlights = data.highlights ?? [];

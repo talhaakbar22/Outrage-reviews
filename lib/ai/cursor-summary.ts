@@ -34,7 +34,25 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-function parseSummaryPayload(raw: string): CursorReviewSummary {
+function summaryCopiesReviewWording(
+  summary: string,
+  reviews: Array<{ title: string | null; body: string | null }>,
+) {
+  const haystack = summary.toLowerCase();
+  if (/[“"][^”"]{3,}[”"]/.test(summary)) return true;
+
+  return reviews.some((review) => {
+    const phrases = [review.body, review.title]
+      .map((value) => (value ?? "").replace(/\s+/g, " ").trim().toLowerCase())
+      .filter((value) => value.length >= 8);
+    return phrases.some((phrase) => haystack.includes(phrase));
+  });
+}
+
+function parseSummaryPayload(
+  raw: string,
+  reviews: Array<{ title: string | null; body: string | null }>,
+): CursorReviewSummary {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -52,6 +70,9 @@ function parseSummaryPayload(raw: string): CursorReviewSummary {
   const summary = String(parsed.summary ?? "").replace(/\s+/g, " ").trim();
   if (summary.length < 20) {
     throw new Error("AI summary was empty");
+  }
+  if (summaryCopiesReviewWording(summary, reviews)) {
+    throw new Error("AI summary copied review wording");
   }
 
   const highlights = Array.isArray(parsed.highlights)
@@ -89,18 +110,20 @@ export async function generateCursorReviewSummary(input: {
     await writeFile(join(workspace, ".gitkeep"), "", "utf8");
 
     const prompt = [
-      "You summarize ALL approved customer reviews for a Shopify product page.",
-      "Include every review, even if the comment is only one or two words (for example “Nice” or “MHG”).",
-      "Short reviews still count: use their star rating plus the words they wrote.",
-      "If most comments are 1-2 words, still write 2-4 full sentences from those words and the ratings.",
-      "Do not skip short reviews. Do not filter by verified purchase. Do not wait for longer comments.",
+      "You write a short product-page summary of ALL approved customer reviews.",
+      "Output 1 to 3 complete sentences only (about one to three lines). Natural merchant voice.",
+      "Treat review words as keywords and themes. Write your own sentences. Never copy, paste, or quote customer wording.",
+      "Do not put review text in quotation marks. Do not list comments. Do not repeat phrases like “Nice product”.",
+      "One or two word reviews still count: use the star rating plus the idea behind the words (for example praise, repurchase, mixed feelings).",
+      "Ignore nonsense or acronym-only comments except for their star rating.",
+      "Do not skip short reviews. Do not filter by verified purchase.",
+      "Do not invent features, materials, or stories that are not implied by the ratings and keywords.",
+      "Do not mention AI or verified purchases.",
       "Do not use tools. Do not edit files. Reply with JSON only.",
       "JSON shape: {\"summary\":\"...\",\"highlights\":[{\"label\":\"...\",\"count\":1}]}",
-      "Write 2-4 sentences in a natural merchant voice covering the overall rating and what shoppers said.",
-      "Do not invent details that are not in the reviews. Do not mention AI or verified purchases.",
       `Product: ${input.productTitle}`,
       `Approved review count: ${input.reviews.length}`,
-      "Reviews (rating, title, body):",
+      "Reviews (rating, title, body) — keywords only, do not quote these back:",
       JSON.stringify(
         input.reviews.map((review, index) => ({
           n: index + 1,
@@ -132,7 +155,7 @@ export async function generateCursorReviewSummary(input: {
       throw new Error(details || "AI summary failed");
     }
 
-    return parseSummaryPayload(result.result);
+    return parseSummaryPayload(result.result, input.reviews);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

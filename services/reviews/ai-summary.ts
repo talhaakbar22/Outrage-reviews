@@ -83,6 +83,7 @@ export function fallbackSummaryFromReviews(input: {
     productTitle: input.productTitle,
     reviewCount: input.reviews.length,
     quotes,
+    ratings: input.reviews.map((review) => Number(review.rating || 0)),
   });
 }
 

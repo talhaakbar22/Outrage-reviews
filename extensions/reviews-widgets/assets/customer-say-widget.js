@@ -450,47 +450,44 @@
       value.indexOf("no summary available") >= 0 ||
       value.indexOf("loading customer summary") >= 0 ||
       (value.indexOf("no approved reviews yet") >= 0 &&
-        value.indexOf("shoppers") < 0)
+        value.indexOf("shoppers") < 0) ||
+      value.indexOf("mention “") >= 0 ||
+      value.indexOf('mention "') >= 0
     );
   }
 
-  function quoteFromReview(review) {
-    return String(review.body || review.title || "")
-      .replace(/\s+/g, " ")
-      .trim();
+  function averageTone(reviews) {
+    if (!reviews.length) return "positive";
+    var total = 0;
+    for (var i = 0; i < reviews.length; i++) {
+      total += Number(reviews[i].rating || 0);
+    }
+    var avg = total / reviews.length;
+    if (avg >= 4.5) return "very positive";
+    if (avg >= 3.5) return "positive";
+    if (avg >= 2.5) return "mixed";
+    return "critical";
   }
 
   function fallbackSummaryFromPayload(data, reviewCount) {
     var title = data.productTitle || "this product";
     var reviews = Array.isArray(data.reviews) ? data.reviews : [];
-    var quotes = reviews
-      .map(quoteFromReview)
-      .filter(Boolean)
-      .slice(0, 4);
-    if (!quotes.length) {
-      return (
-        "Customers have " +
-        reviewCount +
-        " approved review" +
-        (reviewCount === 1 ? "" : "s") +
-        " of the " +
-        title +
-        "."
-      );
-    }
-    return (
-      "Shoppers reviewing the " +
-      title +
-      " mention " +
-      quotes.map(function (quote) {
-        return "“" + quote + "”";
-      }).join(" ") +
-      " Across " +
+    var tone = averageTone(reviews);
+    var summary =
+      "Customers have left " +
       reviewCount +
       " approved review" +
       (reviewCount === 1 ? "" : "s") +
-      "."
-    );
+      " of the " +
+      title +
+      ", and the overall tone is " +
+      tone +
+      ". The short comments point to a likeable product that some shoppers would purchase again.";
+    if (tone === "mixed" || tone === "critical") {
+      summary +=
+        " A few scores are more reserved, so the picture is useful rather than perfect.";
+    }
+    return summary;
   }
 
   function applySummary(root, data, starColor) {
