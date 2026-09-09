@@ -70,7 +70,8 @@ export type CustomerSayPayload = {
 };
 
 const SUMMARY_SOURCE_LIMIT = 200;
-const SNIPPET_LIMIT = 6;
+const SNIPPET_LIMIT = 4;
+const SNIPPET_MIN_RATING = 4;
 
 const THEME_PATTERNS: Array<{ label: string; patterns: RegExp[] }> = [
   {
@@ -297,10 +298,18 @@ export async function buildCustomerSayPayload(input: {
     }
   }
 
-  const snippetCandidates = sourceReviews.filter(
-    (review) =>
-      Boolean(review.body?.trim() || review.title?.trim()) && review.rating >= 1,
-  );
+  const snippetCandidates = [...sourceReviews]
+    .filter((review) => {
+      const quote = (review.body?.trim() || review.title?.trim() || "").length;
+      return quote > 0 && Number(review.rating) >= SNIPPET_MIN_RATING;
+    })
+    .sort((a, b) => {
+      const ratingDiff = Number(b.rating) - Number(a.rating);
+      if (ratingDiff !== 0) return ratingDiff;
+      const aLen = (a.body?.trim() || a.title?.trim() || "").length;
+      const bLen = (b.body?.trim() || b.title?.trim() || "").length;
+      return bLen - aLen;
+    });
 
   const snippets: SummarySnippet[] = snippetCandidates
     .slice(0, SNIPPET_LIMIT)

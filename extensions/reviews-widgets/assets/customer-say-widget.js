@@ -101,6 +101,7 @@
 
     container.hidden = false;
     container.innerHTML = snippets
+      .slice(0, 4)
       .map(function (snippet) {
         return (
           '<article class="or-customer-say__snippet">' +

@@ -134,7 +134,7 @@ export function CustomerSayWidgetPreview({
         })
       : data.summaryText;
   const highlights = data.highlights ?? [];
-  const snippets = data.snippets ?? [];
+  const snippets = (data.snippets ?? []).slice(0, 4);
   const reviews = data.reviews ?? [];
   const showExpanded = expanded;
 
@@ -203,7 +203,7 @@ export function CustomerSayWidgetPreview({
         ) : null}
 
         {!hideSummary && snippets.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {snippets.map((snippet) => (
               <article
                 key={snippet.id}
