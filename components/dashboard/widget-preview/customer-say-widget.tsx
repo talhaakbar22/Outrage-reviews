@@ -81,12 +81,14 @@ export function CustomerSayWidgetPreview({
   onReadMore,
   loadingMore,
   compact = false,
+  hideSummary = false,
 }: {
   data: CustomerSayData | null;
   loading?: boolean;
   onReadMore?: () => void;
   loadingMore?: boolean;
   compact?: boolean;
+  hideSummary?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -164,20 +166,24 @@ export function CustomerSayWidgetPreview({
                 Write a review
               </button>
             </div>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-              What customer says
-            </h2>
-            <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
-              {summaryText}
-            </p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Summarised from {summarySourceCount.toLocaleString()} approved
-              reviews{monthLabel ? ` • ${monthLabel}` : ""}
-            </p>
+            {hideSummary ? null : (
+              <>
+                <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+                  What customer says
+                </h2>
+                <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
+                  {summaryText}
+                </p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Summarised from {summarySourceCount.toLocaleString()} approved
+                  reviews{monthLabel ? ` • ${monthLabel}` : ""}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
-        {highlights.length > 0 ? (
+        {!hideSummary && highlights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {highlights.map((item) => (
               <span
@@ -193,7 +199,7 @@ export function CustomerSayWidgetPreview({
           </div>
         ) : null}
 
-        {snippets.length > 0 ? (
+        {!hideSummary && snippets.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {snippets.map((snippet) => (
               <article

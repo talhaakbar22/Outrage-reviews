@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   CustomerSayWidgetPreview,
   useCustomerSayPreview,
@@ -37,13 +36,13 @@ const widgetCatalog = [
 export function WidgetsWorkspace({
   shopDomain,
   shopifyApiKey,
+  host,
 }: {
   shopDomain: string;
   shopifyApiKey: string;
+  host?: string;
 }) {
-  const searchParams = useSearchParams();
-  const shop = searchParams.get("shop") ?? shopDomain;
-  const host = searchParams.get("host");
+  const shop = shopDomain;
 
   const [query, setQuery] = useState("");
   const [selectedWidget, setSelectedWidget] = useState("customer-say");
@@ -299,6 +298,7 @@ export function WidgetsWorkspace({
             loading={loading}
             loadingMore={loadingMore}
             onReadMore={() => void readMore()}
+            hideSummary
           />
 
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">

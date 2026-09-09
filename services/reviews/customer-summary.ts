@@ -191,6 +191,7 @@ export async function buildCustomerSayPayload(input: {
   reviewsLimit?: number;
   includeReviews?: boolean;
   waitForSummary?: boolean;
+  skipSummary?: boolean;
 }) {
   const db = getDb();
   let product = await db.orm.public.Product.where({
@@ -264,7 +265,7 @@ export async function buildCustomerSayPayload(input: {
   const summarySourceCount = sourceReviews.length;
   let summaryIsReady = Boolean(cached?.isCurrent);
 
-  if (publishedCount > 0 && !cached?.isCurrent) {
+  if (publishedCount > 0 && !cached?.isCurrent && !input.skipSummary) {
     const generate = () =>
       generateAndStoreProductSummary({
         shopId: input.shopId,

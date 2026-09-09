@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       includeReviews: request.nextUrl.searchParams.get("expand") === "true",
       reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
       reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
-      waitForSummary: true,
+      skipSummary: true,
     });
 
     return NextResponse.json({ ok: true, ...data });
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     includeReviews: request.nextUrl.searchParams.get("expand") === "true",
     reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
     reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
-    waitForSummary: true,
+    skipSummary: true,
   });
 
   return NextResponse.json({ ok: true, ...data });
