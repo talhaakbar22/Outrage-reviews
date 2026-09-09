@@ -164,6 +164,9 @@ export function CustomerSayWidgetPreview({
                 Write a review
               </button>
             </div>
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+              What customer says
+            </h2>
             <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
               {summaryText}
             </p>
