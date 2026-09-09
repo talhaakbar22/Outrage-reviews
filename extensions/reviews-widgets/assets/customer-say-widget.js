@@ -476,7 +476,7 @@
       summaryMeta.textContent =
         "Summarised from " +
         Number(data.summarySourceCount || 0).toLocaleString() +
-        " recent verified reviews" +
+        " published reviews" +
         (month ? " • " + month : "");
       summaryMeta.hidden = false;
     }

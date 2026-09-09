@@ -151,8 +151,8 @@ export function CustomerSayWidgetPreview({
               {data.summaryText}
             </p>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Summarised from {summarySourceCount.toLocaleString()} recent
-              verified reviews{monthLabel ? ` • ${monthLabel}` : ""}
+              Summarised from {summarySourceCount.toLocaleString()} published
+              reviews{monthLabel ? ` • ${monthLabel}` : ""}
             </p>
           </div>
         </div>

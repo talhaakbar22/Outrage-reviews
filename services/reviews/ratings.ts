@@ -1,5 +1,5 @@
 import { getDb, nowInstant } from "@/lib/prisma";
-import { enqueueProductRatingSync } from "@/lib/queue";
+import { enqueueAiSummary, enqueueProductRatingSync } from "@/lib/queue";
 import { loadOfflineSessionByShopId } from "@/services/shop/service";
 import { getProductById } from "@/services/products/repository";
 import { updateProductRatingMetafields } from "@/lib/shopify/metafields";
@@ -81,6 +81,10 @@ export async function recalculateProductRatings(
 export async function publishProductRatings(productId: string) {
   const stats = await recalculateProductRatings(productId);
   await enqueueProductRatingSync({
+    shopId: stats.shopId,
+    productId: stats.productId,
+  });
+  await enqueueAiSummary({
     shopId: stats.shopId,
     productId: stats.productId,
   });

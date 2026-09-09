@@ -331,6 +331,52 @@ export async function cancelReviewEmailJobs(requestId: string) {
   }
 }
 
+export async function enqueueAiSummary(input: {
+  shopId: string;
+  productId: string;
+}) {
+  if (env.skipBackgroundQueue()) {
+    const { generateAndStoreProductSummary } = await import(
+      "@/services/reviews/ai-summary"
+    );
+    const { getDb } = await import("@/lib/prisma");
+    const db = getDb();
+    const product = await db.orm.public.Product.where({ id: input.productId }).first();
+    await generateAndStoreProductSummary({
+      shopId: input.shopId,
+      productId: input.productId,
+      productTitle: product?.title ?? null,
+      avgRating: product?.avgRating ?? null,
+    });
+    return;
+  }
+
+  const queue = getAiSummaryQueue();
+  const jobId = `ai-summary-${input.productId}`;
+  const existing = await queue.getJob(jobId);
+  if (existing) {
+    const state = await existing.getState();
+    if (state === "delayed" || state === "waiting" || state === "prioritized") {
+      return;
+    }
+    if (state === "completed" || state === "failed") {
+      await existing.remove();
+    }
+  }
+
+  try {
+    await queue.add("summarize", input, { jobId, delay: 2_000 });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /Job .* already exists|already exists/i.test(error.message)
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
 export function getShopifyRatingsQueue() {
   if (!shopifyRatingsQueue) {
     shopifyRatingsQueue = new Queue<ShopifyRatingsJobData>(

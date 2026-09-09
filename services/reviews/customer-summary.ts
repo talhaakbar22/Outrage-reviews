@@ -1,6 +1,13 @@
 import { getDb, nowInstant, toIsoString, type DbInstant } from "@/lib/prisma";
 import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
 import { ensureProductSynced } from "@/services/products/ensure-synced";
+import {
+  fallbackSummaryFromReviews,
+  fingerprintPublishedReviews,
+  generateAndStoreProductSummary,
+  loadCachedAiSummary,
+} from "@/services/reviews/ai-summary";
+import { enqueueAiSummary } from "@/lib/queue";
 
 export type SummaryHighlight = {
   label: string;
@@ -169,33 +176,6 @@ function buildHighlights(reviewBodies: string[]) {
   return counts.slice(0, 5);
 }
 
-function buildSummaryText(
-  highlights: SummaryHighlight[],
-  verifiedCount: number,
-  productTitle: string | null,
-) {
-  if (verifiedCount === 0) {
-    return "No verified reviews yet. Once customers start leaving feedback, a summary will appear here.";
-  }
-
-  const subject = productTitle ? `the ${productTitle}` : "this product";
-  const top = highlights.slice(0, 3);
-
-  if (top.length === 0) {
-    return `Reviewers consistently praise ${subject}. Customers highlight strong satisfaction across recent verified reviews.`;
-  }
-
-  if (top.length === 1) {
-    return `Reviewers repeatedly call out ${top[0].label.toLowerCase()} when describing ${subject}. Many mention they would recommend it to others.`;
-  }
-
-  if (top.length === 2) {
-    return `Reviewers repeatedly call out ${top[0].label.toLowerCase()} and ${top[1].label.toLowerCase()} when describing ${subject}. Many say it exceeded their expectations.`;
-  }
-
-  return `Reviewers repeatedly call out ${top[0].label.toLowerCase()}, ${top[1].label.toLowerCase()}, and ${top[2].label.toLowerCase()} when describing ${subject}. Many mention they would buy again.`;
-}
-
 function formatSummaryMonth(date: Date) {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
@@ -233,33 +213,63 @@ export async function buildCustomerSayPayload(input: {
     shopId: input.shopId,
     productId: product.id,
     status: "published",
-    isVerifiedPurchase: true,
   })
+    .select(
+      "id",
+      "rating",
+      "title",
+      "body",
+      "reviewerName",
+      "isVerifiedPurchase",
+      "updatedAt",
+    )
     .orderBy((review) => review.publishedAt.desc())
     .limit(SUMMARY_SOURCE_LIMIT)
     .all();
 
-  const verifiedAggregate = await db.orm.public.Review.where({
-    shopId: input.shopId,
-    productId: product.id,
-    status: "published",
-    isVerifiedPurchase: true,
-  }).aggregate((agg) => ({ count: agg.count() }));
-
-  const verifiedCount = Number(verifiedAggregate?.count ?? 0);
+  const verifiedCount = sourceReviews.filter(
+    (review) => review.isVerifiedPurchase,
+  ).length;
 
   const bodies = sourceReviews
     .map((review) => review.body?.trim())
     .filter((body): body is string => Boolean(body));
 
-  const highlights = buildHighlights(bodies);
-  const summaryText = buildSummaryText(
-    highlights,
-    verifiedCount,
-    product.title,
-  );
-  const summarySourceCount = Math.min(sourceReviews.length, SUMMARY_SOURCE_LIMIT);
-  const generatedAt = nowInstant();
+  const heuristicHighlights = buildHighlights(bodies);
+  const fingerprint = fingerprintPublishedReviews(sourceReviews);
+  const cached = await loadCachedAiSummary({
+    shopId: input.shopId,
+    productId: product.id,
+    fingerprint,
+  });
+
+  let summaryText =
+    cached?.summaryText ||
+    fallbackSummaryFromReviews({
+      productTitle: product.title,
+      reviews: sourceReviews,
+    });
+  let highlights =
+    cached?.highlights?.length ? cached.highlights : heuristicHighlights;
+  let generatedAtIso =
+    cached?.generatedAt || toIsoString(nowInstant()) || new Date().toISOString();
+  const summarySourceCount = sourceReviews.length;
+
+  if (publishedCount > 0 && !cached?.isCurrent) {
+    void generateAndStoreProductSummary({
+      shopId: input.shopId,
+      productId: product.id,
+      productTitle: product.title,
+      avgRating: product.avgRating,
+      reviews: sourceReviews,
+    }).catch((error) => {
+      console.error("[ai-summary] generation failed:", error);
+    });
+    void enqueueAiSummary({
+      shopId: input.shopId,
+      productId: product.id,
+    }).catch(() => undefined);
+  }
 
   const snippetCandidates = sourceReviews
     .filter((review) => review.body && review.rating >= 4)
@@ -338,36 +348,6 @@ export async function buildCustomerSayPayload(input: {
 
   const displayCount = Math.max(Number(product.reviewCount), publishedCount);
 
-  const existingSummary = await db.orm.public.AiSummary.where({
-    shopId: input.shopId,
-    productId: product.id,
-  }).first();
-
-  const summaryRecord = {
-    summaryText,
-    highlights,
-    sentimentScore:
-      product.avgRating != null ? product.avgRating / 5 : null,
-    modelVersion: "heuristic-v1",
-    generatedAt,
-  };
-
-  if (existingSummary) {
-    await db.orm.public.AiSummary.where({ id: existingSummary.id }).update({
-      summaryText: summaryRecord.summaryText,
-      highlights: summaryRecord.highlights,
-      sentimentScore: summaryRecord.sentimentScore,
-      modelVersion: summaryRecord.modelVersion,
-      generatedAt: summaryRecord.generatedAt,
-    });
-  } else if (verifiedCount > 0) {
-    await db.orm.public.AiSummary.create({
-      shopId: input.shopId,
-      productId: product.id,
-      ...summaryRecord,
-    });
-  }
-
   return {
     productId: product.id,
     productTitle: product.title,
@@ -376,8 +356,8 @@ export async function buildCustomerSayPayload(input: {
     verifiedCount,
     summaryText,
     summarySourceCount,
-    summaryGeneratedAt: toIsoString(generatedAt) ?? "",
-    summaryMonthLabel: formatSummaryMonth(new Date(toIsoString(generatedAt) ?? "")),
+    summaryGeneratedAt: generatedAtIso,
+    summaryMonthLabel: formatSummaryMonth(new Date(generatedAtIso)),
     highlights,
     snippets,
     reviews,

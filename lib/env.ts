@@ -72,4 +72,8 @@ export const env = {
     const raw = process.env.REVIEW_REMINDER_DELAY_MS;
     return raw ? Number(raw) : null;
   },
+  cursorApiKey: () => {
+    const value = process.env.CURSOR_API_KEY?.trim();
+    return value || null;
+  },
 };

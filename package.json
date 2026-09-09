@@ -18,12 +18,14 @@
     "worker:email": "tsx --import dotenv/config workers/review-email.worker.ts",
     "worker:media": "tsx --import dotenv/config workers/media.worker.ts",
     "worker:ratings": "tsx --import dotenv/config workers/shopify-ratings.worker.ts",
+    "worker:ai-summary": "tsx --import dotenv/config workers/ai-summary.worker.ts",
     "shopify:dev": "node scripts/shopify-dev.mjs",
     "shopify:deploy": "node scripts/prepare-shopify-deploy.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
     "@aws-sdk/s3-request-presigner": "^3.1121.0",
+    "@cursor/sdk": "^1.0.31",
     "@prisma/client": "^7.10.0",
     "@prisma/orm-postgres": "^8.0.0-rc.8",
     "@shopify/app": "^3.58.2",
