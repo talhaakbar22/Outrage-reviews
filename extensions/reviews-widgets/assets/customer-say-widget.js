@@ -459,11 +459,11 @@
       scoreStars.innerHTML = starsHtml(rating || 0, starColor);
     }
     if (verified) {
-      var verifiedCount = Number(data.verifiedCount || 0);
+      var approvedCount = Number(data.count || data.summarySourceCount || 0);
       verified.textContent =
-        verifiedCount.toLocaleString() +
-        " verified review" +
-        (verifiedCount === 1 ? "" : "s");
+        approvedCount.toLocaleString() +
+        " approved review" +
+        (approvedCount === 1 ? "" : "s");
     }
     if (summaryText) {
       summaryText.textContent = data.summaryText || "No summary available yet.";
@@ -476,7 +476,7 @@
       summaryMeta.textContent =
         "Summarised from " +
         Number(data.summarySourceCount || 0).toLocaleString() +
-        " published reviews" +
+        " approved reviews" +
         (month ? " • " + month : "");
       summaryMeta.hidden = false;
     }

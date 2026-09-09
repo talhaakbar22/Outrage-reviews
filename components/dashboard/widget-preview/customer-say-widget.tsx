@@ -107,7 +107,6 @@ export function CustomerSayWidgetPreview({
     (data.summaryGeneratedAt
       ? formatMonthLabel(data.summaryGeneratedAt)
       : "");
-  const verifiedCount = Number(data.verifiedCount ?? 0);
   const summarySourceCount = Number(data.summarySourceCount ?? 0);
   const reviewCount = Math.max(
     Number(data.count ?? 0),
@@ -133,8 +132,8 @@ export function CustomerSayWidgetPreview({
             </p>
             <StarRating rating={Math.round(Number(data.rating ?? 0))} />
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 md:text-base">
-              {verifiedCount.toLocaleString()} verified review
-              {verifiedCount === 1 ? "" : "s"}
+              {reviewCount.toLocaleString()} approved review
+              {reviewCount === 1 ? "" : "s"}
             </p>
           </div>
 
@@ -151,7 +150,7 @@ export function CustomerSayWidgetPreview({
               {data.summaryText}
             </p>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Summarised from {summarySourceCount.toLocaleString()} published
+              Summarised from {summarySourceCount.toLocaleString()} approved
               reviews{monthLabel ? ` • ${monthLabel}` : ""}
             </p>
           </div>

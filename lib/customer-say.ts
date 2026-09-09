@@ -77,7 +77,7 @@ export function normalizeCustomerSayPayload(
     summaryText:
       typeof input.summaryText === "string"
         ? input.summaryText
-        : "No published reviews yet.",
+        : "No approved reviews yet.",
     summarySourceCount: Number(input.summarySourceCount ?? 0),
     summaryGeneratedAt: generatedAt,
     summaryMonthLabel:

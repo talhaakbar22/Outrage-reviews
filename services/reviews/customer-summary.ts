@@ -2,6 +2,7 @@ import { getDb, nowInstant, toIsoString, type DbInstant } from "@/lib/prisma";
 import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
 import { ensureProductSynced } from "@/services/products/ensure-synced";
 import {
+  APPROVED_REVIEW_STATUSES,
   fallbackSummaryFromReviews,
   fingerprintPublishedReviews,
   generateAndStoreProductSummary,
@@ -204,16 +205,17 @@ export async function buildCustomerSayPayload(input: {
   const publishedTotalResult = await db.orm.public.Review.where({
     shopId: input.shopId,
     productId: product.id,
-    status: "published",
-  }).aggregate((agg) => ({ count: agg.count() }));
+  })
+    .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
+    .aggregate((agg) => ({ count: agg.count() }));
 
   const publishedCount = Number(publishedTotalResult?.count ?? 0);
 
   const sourceReviews = await db.orm.public.Review.where({
     shopId: input.shopId,
     productId: product.id,
-    status: "published",
   })
+    .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
     .select(
       "id",
       "rating",
@@ -294,8 +296,8 @@ export async function buildCustomerSayPayload(input: {
     const rows = await db.orm.public.Review.where({
       shopId: input.shopId,
       productId: product.id,
-      status: "published",
     })
+      .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
       .include("media", (media) =>
         media
           .select("id", "url", "thumbnailUrl", "type", "sortOrder")
@@ -384,7 +386,7 @@ export function emptyPayload(
     count: 0,
     verifiedCount: 0,
     summaryText:
-      "No published reviews yet. Once customers start leaving feedback, a summary will appear here.",
+      "No approved reviews yet. Once reviews are approved, a summary will appear here.",
     summarySourceCount: 0,
     summaryGeneratedAt: toIsoString(generatedAt) ?? "",
     summaryMonthLabel: formatSummaryMonth(new Date(toIsoString(generatedAt) ?? "")),

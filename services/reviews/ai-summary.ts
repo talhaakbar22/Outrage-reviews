@@ -6,14 +6,15 @@ import { generateCursorReviewSummary } from "@/lib/ai/cursor-summary";
 
 const SOURCE_LIMIT = 80;
 const BODY_LIMIT = 420;
-const MODEL_PREFIX = "cursor-composer-2.5";
+const MODEL_PREFIX = "cursor-approved-v1";
+
+export const APPROVED_REVIEW_STATUSES = ["published", "approved"] as const;
 
 export type PublishedReviewForSummary = {
   id: string;
   rating: number;
   title: string | null;
   body: string | null;
-  isVerifiedPurchase: boolean;
   updatedAt?: unknown;
 };
 
@@ -59,9 +60,9 @@ export async function listPublishedReviewsForSummary(input: {
   return db.orm.public.Review.where({
     shopId: input.shopId,
     productId: input.productId,
-    status: "published",
   })
-    .select("id", "rating", "title", "body", "isVerifiedPurchase", "updatedAt")
+    .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
+    .select("id", "rating", "title", "body", "updatedAt")
     .orderBy((review) => review.publishedAt.desc())
     .limit(SOURCE_LIMIT)
     .all();
@@ -78,9 +79,9 @@ export function fallbackSummaryFromReviews(input: {
   if (withText.length === 0) {
     const count = input.reviews.length;
     if (count === 0) {
-      return "No published reviews yet. Once customers start leaving feedback, a summary will appear here.";
+      return "No approved reviews yet. Once reviews are approved, a summary will appear here.";
     }
-    return `Customers have published ${count} review${count === 1 ? "" : "s"} of ${subject}. Written comments will appear in this summary as soon as shoppers add them.`;
+    return `Customers have ${count} approved review${count === 1 ? "" : "s"} of ${subject}. Written comments will appear in this summary as soon as shoppers add them.`;
   }
 
   const quotes = withText
@@ -88,7 +89,7 @@ export function fallbackSummaryFromReviews(input: {
     .map((review) => clip(review.body, 90) || clip(review.title, 80))
     .filter((quote): quote is string => Boolean(quote));
   const quoted = quotes.map((quote) => `“${quote}”`).join(" ");
-  return `Shoppers reviewing ${subject} mention ${quoted} Across ${input.reviews.length} published review${input.reviews.length === 1 ? "" : "s"}, the overall tone is ${averageTone(input.reviews)}.`;
+  return `Shoppers reviewing ${subject} mention ${quoted} Across ${input.reviews.length} approved review${input.reviews.length === 1 ? "" : "s"}, the overall tone is ${averageTone(input.reviews)}.`;
 }
 
 function averageTone(reviews: PublishedReviewForSummary[]) {
@@ -235,7 +236,6 @@ export async function generateAndStoreProductSummary(input: {
           rating: review.rating,
           title: clip(review.title, 120),
           body: clip(review.body, BODY_LIMIT),
-          isVerifiedPurchase: review.isVerifiedPurchase,
         })),
       });
 

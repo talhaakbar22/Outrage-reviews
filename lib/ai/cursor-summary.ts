@@ -77,7 +77,6 @@ export async function generateCursorReviewSummary(input: {
     rating: number;
     title: string | null;
     body: string | null;
-    isVerifiedPurchase: boolean;
   }>;
 }): Promise<CursorReviewSummary> {
   const apiKey = env.cursorApiKey();
@@ -90,20 +89,20 @@ export async function generateCursorReviewSummary(input: {
     await writeFile(join(workspace, ".gitkeep"), "", "utf8");
 
     const prompt = [
-      "You summarize published customer reviews for a Shopify product page.",
+      "You summarize approved customer reviews for a Shopify product page.",
+      "Use every approved review provided. Do not filter by verified purchase.",
       "Do not use tools. Do not edit files. Reply with JSON only.",
       "JSON shape: {\"summary\":\"...\",\"highlights\":[{\"label\":\"...\",\"count\":1}]}",
       "Write 2-4 sentences in a natural merchant voice. Mention concrete themes from the reviews.",
-      "Do not invent facts that are not in the reviews. Do not mention AI.",
+      "Do not invent facts that are not in the reviews. Do not mention AI or verified purchases.",
       `Product: ${input.productTitle}`,
-      `Published review count: ${input.reviews.length}`,
+      `Approved review count: ${input.reviews.length}`,
       "Reviews:",
       JSON.stringify(
         input.reviews.map((review) => ({
           rating: review.rating,
           title: review.title,
           body: review.body,
-          verified: review.isVerifiedPurchase,
         })),
       ),
     ].join("\n");
