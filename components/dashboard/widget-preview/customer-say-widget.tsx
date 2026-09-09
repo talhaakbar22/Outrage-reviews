@@ -161,19 +161,28 @@ export function CustomerSayWidgetPreview({
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-start md:justify-end">
-              <button
-                type="button"
-                className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
-              >
-                Write a review
-              </button>
-            </div>
-            {hideSummary ? null : (
+            {hideSummary ? (
+              <div className="flex justify-start md:justify-end">
+                <button
+                  type="button"
+                  className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
+                >
+                  Write a review
+                </button>
+              </div>
+            ) : (
               <>
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-                  What customer says
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-2xl font-bold tracking-tight text-zinc-950 md:text-3xl dark:text-zinc-50">
+                    What customer says
+                  </h2>
+                  <button
+                    type="button"
+                    className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
+                  >
+                    Write a review
+                  </button>
+                </div>
                 <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
                   {summaryText}
                 </p>

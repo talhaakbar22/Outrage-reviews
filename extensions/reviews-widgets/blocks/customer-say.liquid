@@ -69,21 +69,23 @@
         </div>
 
         <div class="or-customer-say__summary">
-          {% if block.settings.show_write_review %}
-            <div class="or-customer-say__summary-actions">
-              {% if write_review_href != blank %}
-                <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
-                  {{ block.settings.write_review_label }}
-                </a>
-              {% else %}
-                <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
-                  {{ block.settings.write_review_label }}
-                </button>
-              {% endif %}
-            </div>
-          {% endif %}
+          <div class="or-customer-say__summary-header">
+            <h2 class="or-customer-say__heading">What customer says</h2>
+            {% if block.settings.show_write_review %}
+              <div class="or-customer-say__summary-actions">
+                {% if write_review_href != blank %}
+                  <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
+                    {{ block.settings.write_review_label }}
+                  </a>
+                {% else %}
+                  <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
+                    {{ block.settings.write_review_label }}
+                  </button>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
 
-          <h2 class="or-customer-say__heading">What customer says</h2>
           <p class="or-customer-say__text" data-outrage-summary-text>
             Loading customer summary…
           </p>
