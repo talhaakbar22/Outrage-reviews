@@ -261,7 +261,7 @@
 }
 
 .or-customer-say {
-  --or-star-color: #f5a623;
+  --or-star-color: #18181b;
   --or-star-size: 18px;
   --or-text: inherit;
   --or-muted: color-mix(in srgb, currentColor 58%, transparent);

@@ -9,7 +9,7 @@
 
   function starsHtml(rating, starColor) {
     var value = Math.max(0, Math.min(5, Number(rating) || 0));
-    var color = starColor || "#F5A623";
+    var color = starColor || "#18181B";
     var html =
       '<span class="or-star-row" style="--or-star-color:' +
       escapeHtml(color) +
@@ -553,7 +553,7 @@
     var reviewsList = root.querySelector("[data-outrage-reviews-list]");
     var loadMore = root.querySelector("[data-outrage-load-more]");
     var pageSize = Number(root.getAttribute("data-reviews-page-size") || 10);
-    var starColor = root.getAttribute("data-star-color") || "#F5A623";
+    var starColor = root.getAttribute("data-star-color") || "#18181B";
     var state = {
       offset: 0,
       hasMore: false,

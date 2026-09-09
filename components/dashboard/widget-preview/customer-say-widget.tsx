@@ -150,7 +150,10 @@ export function CustomerSayWidgetPreview({
             <p className="text-4xl font-bold tracking-tight md:text-5xl">
               {data.rating ? formatRating(Number(data.rating)) : "—"}
             </p>
-            <StarRating rating={Math.round(Number(data.rating ?? 0))} />
+            <StarRating
+              rating={Math.round(Number(data.rating ?? 0))}
+              tone="dark"
+            />
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 md:text-base">
               {reviewCount.toLocaleString()} approved review
               {reviewCount === 1 ? "" : "s"}
@@ -213,7 +216,7 @@ export function CustomerSayWidgetPreview({
                   <span className="font-medium text-zinc-700 dark:text-zinc-300">
                     {snippet.reviewerName || "Customer"}
                   </span>
-                  <StarRating rating={snippet.rating} />
+                  <StarRating rating={snippet.rating} tone="dark" />
                   {snippet.isVerifiedPurchase ? (
                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                       Verified
@@ -283,7 +286,7 @@ export function CustomerSayWidgetPreview({
                             </span>
                           ) : null}
                         </div>
-                        <StarRating rating={review.rating} />
+                        <StarRating rating={review.rating} tone="dark" />
                       </div>
                       {review.title ? (
                         <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">

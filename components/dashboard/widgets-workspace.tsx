@@ -70,7 +70,7 @@ export function WidgetsWorkspace({
                   <div className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
                     4.9
                   </div>
-                  <div className="text-amber-500">★★★★★</div>
+                  <div className="text-zinc-900 dark:text-zinc-100">★★★★★</div>
                 </div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-700 dark:text-zinc-300">
                   What customers say
