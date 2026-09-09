@@ -69,6 +69,12 @@ export function isPlaceholderCustomerSummary(text: string | null | undefined) {
     return true;
   }
   if (value.includes("mention “") || value.includes('mention "')) return true;
+  if (
+    value.includes("customers have left") &&
+    value.includes("approved review")
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -160,27 +166,32 @@ function themeSentence(keywords: string[]) {
   return "Most comments are very short, so this summary follows the star ratings more than detailed write-ups.";
 }
 
+function toneSentence(tone: string) {
+  if (tone === "very positive") {
+    return "Shoppers are enthusiastic overall.";
+  }
+  if (tone === "positive") {
+    return "Shoppers are generally pleased.";
+  }
+  if (tone === "mixed") {
+    return "Shopper feedback is mixed overall.";
+  }
+  return "Shopper feedback is more cautious overall.";
+}
+
 export function buildFallbackCustomerSummary(input: {
   productTitle?: string | null;
   reviewCount: number;
   quotes: Array<string | null | undefined>;
   ratings?: number[];
 }) {
-  const subject = input.productTitle
-    ? `the ${input.productTitle}`
-    : "this product";
   if (input.reviewCount <= 0) {
     return "No approved reviews yet. Once reviews are approved, a summary will appear here.";
   }
 
   const tone = averageReviewTone(input.ratings ?? []);
   const keywords = extractSummaryKeywords(input.quotes);
-  const lines = [
-    `Customers have left ${input.reviewCount} approved review${
-      input.reviewCount === 1 ? "" : "s"
-    } of ${subject}, and the overall tone is ${tone}.`,
-    themeSentence(keywords),
-  ];
+  const lines = [toneSentence(tone), themeSentence(keywords)];
 
   if (tone === "mixed" || tone === "critical") {
     lines.push(

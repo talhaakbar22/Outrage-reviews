@@ -452,7 +452,9 @@
       (value.indexOf("no approved reviews yet") >= 0 &&
         value.indexOf("shoppers") < 0) ||
       value.indexOf("mention “") >= 0 ||
-      value.indexOf('mention "') >= 0
+      value.indexOf('mention "') >= 0 ||
+      (value.indexOf("customers have left") >= 0 &&
+        value.indexOf("approved review") >= 0)
     );
   }
 
@@ -470,19 +472,19 @@
   }
 
   function fallbackSummaryFromPayload(data, reviewCount) {
-    var title = data.productTitle || "this product";
     var reviews = Array.isArray(data.reviews) ? data.reviews : [];
     var tone = averageTone(reviews);
+    var opener =
+      tone === "very positive"
+        ? "Shoppers are enthusiastic overall. "
+        : tone === "positive"
+          ? "Shoppers are generally pleased. "
+          : tone === "mixed"
+            ? "Shopper feedback is mixed overall. "
+            : "Shopper feedback is more cautious overall. ";
     var summary =
-      "Customers have left " +
-      reviewCount +
-      " approved review" +
-      (reviewCount === 1 ? "" : "s") +
-      " of the " +
-      title +
-      ", and the overall tone is " +
-      tone +
-      ". The short comments point to a likeable product that some shoppers would purchase again.";
+      opener +
+      "The short comments point to a likeable product that some shoppers would purchase again.";
     if (tone === "mixed" || tone === "critical") {
       summary +=
         " A few scores are more reserved, so the picture is useful rather than perfect.";

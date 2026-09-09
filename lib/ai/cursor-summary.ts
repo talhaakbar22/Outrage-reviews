@@ -40,6 +40,12 @@ function summaryCopiesReviewWording(
 ) {
   const haystack = summary.toLowerCase();
   if (/[“"][^”"]{3,}[”"]/.test(summary)) return true;
+  if (
+    haystack.includes("customers have left") &&
+    haystack.includes("approved review")
+  ) {
+    return true;
+  }
 
   return reviews.some((review) => {
     const phrases = [review.body, review.title]
@@ -118,7 +124,8 @@ export async function generateCursorReviewSummary(input: {
       "Ignore nonsense or acronym-only comments except for their star rating.",
       "Do not skip short reviews. Do not filter by verified purchase.",
       "Do not invent features, materials, or stories that are not implied by the ratings and keywords.",
-      "Do not mention AI or verified purchases.",
+      "Do not mention how many reviews there are, approved counts, or the product title in a sentence like “Customers have left 4 approved reviews of the Gift Card”.",
+      "Do not start with a review-count opener. Write only what shoppers felt.",
       "Do not use tools. Do not edit files. Reply with JSON only.",
       "JSON shape: {\"summary\":\"...\",\"highlights\":[{\"label\":\"...\",\"count\":1}]}",
       `Product: ${input.productTitle}`,
