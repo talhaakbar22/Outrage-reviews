@@ -1,24 +1,32 @@
 import { env } from "@/lib/env";
-import { buildReviewEmail } from "@/services/email/templates";
-import type { ReviewEmailPayload } from "@/services/email/types";
+import {
+  buildMerchantReplyEmail,
+  buildReviewEmail,
+} from "@/services/email/templates";
+import type {
+  MerchantReplyEmailPayload,
+  ReviewEmailPayload,
+} from "@/services/email/types";
 
 export type SendEmailResult = {
   provider: "console" | "resend";
   id: string | null;
 };
 
-export async function sendReviewEmail(
-  payload: ReviewEmailPayload,
-): Promise<SendEmailResult> {
-  const content = buildReviewEmail(payload);
+async function deliverEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  logKind: string;
+}): Promise<SendEmailResult> {
   const provider = env.emailProvider();
 
   if (provider === "console") {
     console.log("[email:console]", {
-      kind: payload.kind,
-      to: payload.to,
-      subject: content.subject,
-      reviewUrl: payload.reviewUrl,
+      kind: input.logKind,
+      to: input.to,
+      subject: input.subject,
     });
     return { provider: "console", id: `console-${Date.now()}` };
   }
@@ -34,10 +42,10 @@ export async function sendReviewEmail(
     },
     body: JSON.stringify({
       from,
-      to: [payload.to],
-      subject: content.subject,
-      text: content.text,
-      html: content.html,
+      to: [input.to],
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
     }),
   });
 
@@ -49,9 +57,37 @@ export async function sendReviewEmail(
 
   if (!response.ok) {
     throw new Error(
-      data.error?.message ?? data.message ?? `Resend send failed (${response.status})`,
+      data.error?.message ??
+        data.message ??
+        `Resend send failed (${response.status})`,
     );
   }
 
   return { provider: "resend", id: data.id ?? null };
+}
+
+export async function sendReviewEmail(
+  payload: ReviewEmailPayload,
+): Promise<SendEmailResult> {
+  const content = buildReviewEmail(payload);
+  return deliverEmail({
+    to: payload.to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+    logKind: payload.kind,
+  });
+}
+
+export async function sendMerchantReplyEmailMessage(
+  payload: MerchantReplyEmailPayload,
+): Promise<SendEmailResult> {
+  const content = buildMerchantReplyEmail(payload);
+  return deliverEmail({
+    to: payload.to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+    logKind: "merchant_reply",
+  });
 }

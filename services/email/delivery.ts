@@ -1,11 +1,17 @@
-import { getDb, isBefore, nowInstant } from "@/lib/prisma";
+import { getDb, isBefore, nowInstant, toIsoString } from "@/lib/prisma";
 import { buildReviewRequestUrl } from "@/lib/review-token";
 import {
   enqueueReviewReminder,
   cancelReviewEmailJobs,
 } from "@/lib/queue";
-import { sendReviewEmail } from "@/services/email/send";
-import type { ReviewEmailKind } from "@/services/email/types";
+import {
+  sendMerchantReplyEmailMessage,
+  sendReviewEmail,
+} from "@/services/email/send";
+import type {
+  ConversationMessage,
+  ReviewEmailKind,
+} from "@/services/email/types";
 
 async function loadEmailContext(requestId: string, rawToken: string) {
   const db = getDb();
@@ -158,6 +164,112 @@ export async function sendReviewReminderEmail(input: {
 
   await getDb().orm.public.ReviewRequest.where({ id: context.request.id }).update({
     remindedAt: nowInstant(),
+  });
+
+  return { sent: true as const };
+}
+
+function formatConversationDate(value: unknown) {
+  const iso = toIsoString(value as never);
+  if (!iso) return null;
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function productStorefrontUrl(input: {
+  shopifyDomain: string;
+  handle: string | null;
+}) {
+  if (!input.handle) return null;
+  return `https://${input.shopifyDomain}/products/${input.handle}`;
+}
+
+export async function sendMerchantReplyEmail(input: {
+  shopId: string;
+  reviewId: string;
+}) {
+  const db = getDb();
+  const [settings, shop, review] = await Promise.all([
+    db.orm.public.ShopSettings.where({ shopId: input.shopId }).first(),
+    db.orm.public.Shop.where({ id: input.shopId }).first(),
+    db.orm.public.Review.where({
+      id: input.reviewId,
+      shopId: input.shopId,
+    })
+      .include("product", (product) =>
+        product.select("id", "title", "handle", "shopifyProductId"),
+      )
+      .include("replies", (replies) =>
+        replies
+          .select("id", "body", "authorName", "publishedAt")
+          .orderBy((item) => item.publishedAt.asc()),
+      )
+      .first(),
+  ]);
+
+  if (!settings?.emailEnabled) {
+    return { sent: false as const, reason: "email_disabled" };
+  }
+
+  if (!shop || !review) {
+    return { sent: false as const, reason: "missing_review" };
+  }
+
+  const to = review.reviewerEmail?.trim() || null;
+  if (!to) {
+    return { sent: false as const, reason: "missing_reviewer_email" };
+  }
+
+  const shopName = shop.name ?? shop.shopifyDomain;
+  const product = review.product;
+  const productTitle = product?.title ?? "your purchase";
+
+  const conversation: ConversationMessage[] = [
+    {
+      role: "customer",
+      authorName: review.reviewerName?.trim() || "You",
+      body:
+        [review.title?.trim(), review.body?.trim()].filter(Boolean).join("\n\n") ||
+        "Left a star rating.",
+      rating: review.rating,
+      sentAt: formatConversationDate(review.publishedAt ?? review.createdAt),
+    },
+  ];
+
+  const replies = Array.isArray(review.replies) ? review.replies : [];
+  for (const reply of replies) {
+    const body = reply.body?.trim();
+    if (!body) continue;
+    conversation.push({
+      role: "store",
+      authorName: reply.authorName?.trim() || shopName,
+      body,
+      sentAt: formatConversationDate(reply.publishedAt),
+    });
+  }
+
+  if (conversation.length < 2) {
+    return { sent: false as const, reason: "missing_store_reply" };
+  }
+
+  await sendMerchantReplyEmailMessage({
+    to,
+    shopName,
+    shopDomain: shop.shopifyDomain,
+    productTitle,
+    productUrl: product
+      ? productStorefrontUrl({
+          shopifyDomain: shop.shopifyDomain,
+          handle: product.handle,
+        })
+      : null,
+    customerName: review.reviewerName,
+    conversation,
   });
 
   return { sent: true as const };

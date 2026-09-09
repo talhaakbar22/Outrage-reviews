@@ -9,6 +9,24 @@ export type ReviewEmailPayload = {
   kind: ReviewEmailKind;
 };
 
+export type ConversationMessage = {
+  role: "customer" | "store";
+  authorName: string;
+  body: string;
+  rating?: number | null;
+  sentAt: string | null;
+};
+
+export type MerchantReplyEmailPayload = {
+  to: string;
+  shopName: string;
+  shopDomain: string;
+  productTitle: string;
+  productUrl: string | null;
+  customerName: string | null;
+  conversation: ConversationMessage[];
+};
+
 export type ReviewRequestJobData = {
   requestId: string;
   rawToken: string;

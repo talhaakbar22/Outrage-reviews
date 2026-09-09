@@ -447,6 +447,27 @@ export async function replyToReview(input: {
     merchantRepliedAt: now,
   });
 
+  void import("@/services/email")
+    .then(({ sendMerchantReplyEmail }) =>
+      sendMerchantReplyEmail({
+        shopId: input.shopId,
+        reviewId: review.id,
+      }),
+    )
+    .then((result) => {
+      if (!result.sent) {
+        console.log(
+          `[email] skipped merchant reply email for ${review.id}: ${result.reason}`,
+        );
+      }
+    })
+    .catch((error) => {
+      console.error(
+        `[email] failed to send merchant reply email for ${review.id}:`,
+        error,
+      );
+    });
+
   return getDashboardReview(input.shopId, review.id);
 }
 
