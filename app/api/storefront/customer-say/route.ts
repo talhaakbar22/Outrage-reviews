@@ -6,12 +6,13 @@ import {
 import { getShopByDomain } from "@/services/storefront/reviews";
 import { buildCustomerSayPayload } from "@/services/reviews/customer-summary";
 
-function corsHeaders(origin: string | null) {
+function corsHeaders(origin: string | null, cacheControl?: string) {
   return {
     "Access-Control-Allow-Origin": origin ?? "*",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Cache-Control": "public, max-age=120, s-maxage=120",
+    "Cache-Control":
+      cacheControl ?? "private, no-store, max-age=0, must-revalidate",
   };
 }
 
@@ -78,6 +79,13 @@ export async function GET(request: NextRequest) {
       shopifyProductId: productId,
       ...data,
     },
-    { headers: corsHeaders(origin) },
+    {
+      headers: corsHeaders(
+        origin,
+        data.summaryIsReady
+          ? "public, max-age=60, s-maxage=60"
+          : "private, no-store, max-age=0, must-revalidate",
+      ),
+    },
   );
 }

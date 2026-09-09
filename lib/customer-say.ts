@@ -21,6 +21,7 @@ export type CustomerSayViewModel = {
   summarySourceCount: number;
   summaryGeneratedAt: string;
   summaryMonthLabel?: string;
+  summaryIsReady?: boolean;
   highlights: SummaryHighlight[];
   snippets: SummarySnippet[];
   reviews: Array<{
@@ -55,6 +56,48 @@ export type CustomerSayViewModel = {
 
 function formatSummaryMonth(date: Date) {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+export function isPlaceholderCustomerSummary(text: string | null | undefined) {
+  const value = (text ?? "").trim().toLowerCase();
+  if (!value) return true;
+  if (value.includes("no verified reviews yet")) return true;
+  if (value.includes("no published reviews yet")) return true;
+  if (value.includes("no summary available")) return true;
+  if (value.includes("loading customer summary")) return true;
+  if (value.includes("no approved reviews yet") && !value.includes("shoppers")) {
+    return true;
+  }
+  return false;
+}
+
+export function buildFallbackCustomerSummary(input: {
+  productTitle?: string | null;
+  reviewCount: number;
+  quotes: Array<string | null | undefined>;
+}) {
+  const subject = input.productTitle
+    ? `the ${input.productTitle}`
+    : "this product";
+  if (input.reviewCount <= 0) {
+    return "No approved reviews yet. Once reviews are approved, a summary will appear here.";
+  }
+
+  const quotes = input.quotes
+    .map((quote) => (quote ?? "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (quotes.length === 0) {
+    return `Customers have ${input.reviewCount} approved review${
+      input.reviewCount === 1 ? "" : "s"
+    } of ${subject}. Written comments will appear in this summary as soon as shoppers add them.`;
+  }
+
+  const quoted = quotes.map((quote) => `“${quote}”`).join(" ");
+  return `Shoppers reviewing ${subject} mention ${quoted} Across ${
+    input.reviewCount
+  } approved review${input.reviewCount === 1 ? "" : "s"}.`;
 }
 
 export function normalizeCustomerSayPayload(

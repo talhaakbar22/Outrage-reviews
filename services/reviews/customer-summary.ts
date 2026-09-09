@@ -1,5 +1,8 @@
 import { getDb, nowInstant, toIsoString, type DbInstant } from "@/lib/prisma";
-import { normalizeCustomerSayPayload as normalizeCustomerSayViewModel } from "@/lib/customer-say";
+import {
+  isPlaceholderCustomerSummary,
+  normalizeCustomerSayPayload as normalizeCustomerSayViewModel,
+} from "@/lib/customer-say";
 import { ensureProductSynced } from "@/services/products/ensure-synced";
 import {
   APPROVED_REVIEW_STATUSES,
@@ -8,7 +11,6 @@ import {
   generateAndStoreProductSummary,
   loadCachedAiSummary,
 } from "@/services/reviews/ai-summary";
-import { enqueueAiSummary } from "@/lib/queue";
 
 export type SummaryHighlight = {
   label: string;
@@ -38,6 +40,7 @@ export type CustomerSayPayload = {
   summaryText: string;
   summarySourceCount: number;
   summaryGeneratedAt: string;
+  summaryIsReady?: boolean;
   highlights: SummaryHighlight[];
   snippets: SummarySnippet[];
   reviews: Array<{
@@ -187,6 +190,7 @@ export async function buildCustomerSayPayload(input: {
   reviewsOffset?: number;
   reviewsLimit?: number;
   includeReviews?: boolean;
+  waitForSummary?: boolean;
 }) {
   const db = getDb();
   let product = await db.orm.public.Product.where({
@@ -245,43 +249,63 @@ export async function buildCustomerSayPayload(input: {
     fingerprint,
   });
 
+  const immediateSummary = fallbackSummaryFromReviews({
+    productTitle: product.title,
+    reviews: sourceReviews,
+  });
   let summaryText =
-    cached?.summaryText ||
-    fallbackSummaryFromReviews({
-      productTitle: product.title,
-      reviews: sourceReviews,
-    });
+    cached?.summaryText && !isPlaceholderCustomerSummary(cached.summaryText)
+      ? cached.summaryText
+      : immediateSummary;
   let highlights =
     cached?.highlights?.length ? cached.highlights : heuristicHighlights;
   let generatedAtIso =
     cached?.generatedAt || toIsoString(nowInstant()) || new Date().toISOString();
   const summarySourceCount = sourceReviews.length;
+  let summaryIsReady = Boolean(cached?.isCurrent);
 
   if (publishedCount > 0 && !cached?.isCurrent) {
-    void generateAndStoreProductSummary({
-      shopId: input.shopId,
-      productId: product.id,
-      productTitle: product.title,
-      avgRating: product.avgRating,
-      reviews: sourceReviews,
-    }).catch((error) => {
-      console.error("[ai-summary] generation failed:", error);
-    });
-    void enqueueAiSummary({
-      shopId: input.shopId,
-      productId: product.id,
-    }).catch(() => undefined);
+    const generate = () =>
+      generateAndStoreProductSummary({
+        shopId: input.shopId,
+        productId: product.id,
+        productTitle: product.title,
+        avgRating: product.avgRating,
+        reviews: sourceReviews,
+      });
+
+    if (input.waitForSummary) {
+      try {
+        const generated = await generate();
+        if (generated?.summaryText) {
+          summaryText = generated.summaryText;
+          highlights =
+            generated.highlights.length > 0
+              ? generated.highlights
+              : heuristicHighlights;
+          generatedAtIso = generated.generatedAt;
+          summaryIsReady = true;
+        }
+      } catch (error) {
+        console.error("[ai-summary] generation failed:", error);
+      }
+    } else {
+      void generate().catch((error) => {
+        console.error("[ai-summary] generation failed:", error);
+      });
+    }
   }
 
-  const snippetCandidates = sourceReviews
-    .filter((review) => review.body && review.rating >= 4)
-    .slice(0, 40);
+  const snippetCandidates = sourceReviews.filter(
+    (review) =>
+      Boolean(review.body?.trim() || review.title?.trim()) && review.rating >= 1,
+  );
 
   const snippets: SummarySnippet[] = snippetCandidates
     .slice(0, SNIPPET_LIMIT)
     .map((review) => ({
       id: review.id,
-      quote: firstSentence(review.body ?? ""),
+      quote: firstSentence(review.body?.trim() || review.title || ""),
       reviewerName: review.reviewerName,
       rating: review.rating,
       isVerifiedPurchase: review.isVerifiedPurchase,
@@ -360,6 +384,7 @@ export async function buildCustomerSayPayload(input: {
     summarySourceCount,
     summaryGeneratedAt: generatedAtIso,
     summaryMonthLabel: formatSummaryMonth(new Date(generatedAtIso)),
+    summaryIsReady,
     highlights,
     snippets,
     reviews,
@@ -368,16 +393,16 @@ export async function buildCustomerSayPayload(input: {
     reviewsLimit,
     hasMoreReviews:
       reviewsOffset + reviews.length < Number(reviewsTotal),
-  } satisfies CustomerSayPayload & { summaryMonthLabel: string };
+  } satisfies CustomerSayPayload & { summaryMonthLabel: string; summaryIsReady: boolean };
 }
 
 export function emptyPayload(
   offset: number,
   limit: number,
   overrides: Partial<
-    CustomerSayPayload & { summaryMonthLabel: string }
+    CustomerSayPayload & { summaryMonthLabel: string; summaryIsReady: boolean }
   > = {},
-): CustomerSayPayload & { summaryMonthLabel: string } {
+): CustomerSayPayload & { summaryMonthLabel: string; summaryIsReady: boolean } {
   const generatedAt = nowInstant();
   return {
     productId: null,
@@ -390,6 +415,7 @@ export function emptyPayload(
     summarySourceCount: 0,
     summaryGeneratedAt: toIsoString(generatedAt) ?? "",
     summaryMonthLabel: formatSummaryMonth(new Date(toIsoString(generatedAt) ?? "")),
+    summaryIsReady: false,
     highlights: [],
     snippets: [],
     reviews: [],

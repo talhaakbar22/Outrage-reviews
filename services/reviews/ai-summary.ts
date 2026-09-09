@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { getDb, nowInstant, toIsoString } from "@/lib/prisma";
 import { env } from "@/lib/env";
-import type { SummaryHighlight } from "@/lib/customer-say";
+import {
+  buildFallbackCustomerSummary,
+  isPlaceholderCustomerSummary,
+  type SummaryHighlight,
+} from "@/lib/customer-say";
 import { generateCursorReviewSummary } from "@/lib/ai/cursor-summary";
 
 const SOURCE_LIMIT = 80;
@@ -72,34 +76,14 @@ export function fallbackSummaryFromReviews(input: {
   productTitle: string | null;
   reviews: PublishedReviewForSummary[];
 }) {
-  const withText = input.reviews.filter(
-    (review) => clip(review.body, BODY_LIMIT) || clip(review.title, 80),
-  );
-  const subject = input.productTitle ? `the ${input.productTitle}` : "this product";
-  if (withText.length === 0) {
-    const count = input.reviews.length;
-    if (count === 0) {
-      return "No approved reviews yet. Once reviews are approved, a summary will appear here.";
-    }
-    return `Customers have ${count} approved review${count === 1 ? "" : "s"} of ${subject}. Written comments will appear in this summary as soon as shoppers add them.`;
-  }
-
-  const quotes = withText
-    .slice(0, 3)
+  const quotes = input.reviews
     .map((review) => clip(review.body, 90) || clip(review.title, 80))
     .filter((quote): quote is string => Boolean(quote));
-  const quoted = quotes.map((quote) => `“${quote}”`).join(" ");
-  return `Shoppers reviewing ${subject} mention ${quoted} Across ${input.reviews.length} approved review${input.reviews.length === 1 ? "" : "s"}, the overall tone is ${averageTone(input.reviews)}.`;
-}
-
-function averageTone(reviews: PublishedReviewForSummary[]) {
-  const avg =
-    reviews.reduce((total, review) => total + Number(review.rating || 0), 0) /
-    Math.max(reviews.length, 1);
-  if (avg >= 4.5) return "very positive";
-  if (avg >= 3.5) return "positive";
-  if (avg >= 2.5) return "mixed";
-  return "critical";
+  return buildFallbackCustomerSummary({
+    productTitle: input.productTitle,
+    reviewCount: input.reviews.length,
+    quotes,
+  });
 }
 
 async function persistSummary(input: {
@@ -140,10 +124,14 @@ async function persistSummary(input: {
   return {
     summaryText: input.summaryText,
     highlights: input.highlights,
-    summarySourceCount: 0,
     generatedAt: toIsoString(generatedAt) ?? new Date().toISOString(),
     modelVersion: input.modelVersion,
   };
+}
+
+function isUsableCachedSummary(summaryText: string, modelVersion: string | null) {
+  if (modelVersion === "heuristic-v1") return false;
+  return !isPlaceholderCustomerSummary(summaryText);
 }
 
 export async function loadCachedAiSummary(input: {
@@ -156,7 +144,12 @@ export async function loadCachedAiSummary(input: {
     shopId: input.shopId,
     productId: input.productId,
   }).first();
-  if (!existing?.summaryText?.trim()) return null;
+  if (
+    !existing?.summaryText?.trim() ||
+    !isUsableCachedSummary(existing.summaryText, existing.modelVersion ?? null)
+  ) {
+    return null;
+  }
 
   const expected = modelVersionFor(input.fingerprint);
   const isCurrent =
@@ -167,7 +160,6 @@ export async function loadCachedAiSummary(input: {
     highlights: Array.isArray(existing.highlights)
       ? (existing.highlights as SummaryHighlight[])
       : [],
-    summarySourceCount: 0,
     generatedAt: toIsoString(existing.generatedAt) ?? "",
     modelVersion: existing.modelVersion ?? "",
     isCurrent,

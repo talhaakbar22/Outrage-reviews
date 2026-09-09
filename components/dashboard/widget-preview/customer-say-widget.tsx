@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatRating, formatReviewDate, StarRating } from "@/components/dashboard/review-ui";
-import { normalizeCustomerSayPayload } from "@/lib/customer-say";
+import {
+  buildFallbackCustomerSummary,
+  isPlaceholderCustomerSummary,
+  normalizeCustomerSayPayload,
+} from "@/lib/customer-say";
 
 export type CustomerSayData = import("@/lib/customer-say").CustomerSayViewModel;
 
@@ -107,12 +111,25 @@ export function CustomerSayWidgetPreview({
     (data.summaryGeneratedAt
       ? formatMonthLabel(data.summaryGeneratedAt)
       : "");
-  const summarySourceCount = Number(data.summarySourceCount ?? 0);
   const reviewCount = Math.max(
     Number(data.count ?? 0),
     Number(data.reviewsTotal ?? 0),
     data.reviews?.length ?? 0,
   );
+  const summarySourceCount = Math.max(
+    Number(data.summarySourceCount ?? 0),
+    reviewCount,
+  );
+  const summaryText =
+    isPlaceholderCustomerSummary(data.summaryText) && reviewCount > 0
+      ? buildFallbackCustomerSummary({
+          productTitle: data.productTitle,
+          reviewCount,
+          quotes: (data.reviews ?? []).map(
+            (review) => review.body || review.title,
+          ),
+        })
+      : data.summaryText;
   const highlights = data.highlights ?? [];
   const snippets = data.snippets ?? [];
   const reviews = data.reviews ?? [];
@@ -147,7 +164,7 @@ export function CustomerSayWidgetPreview({
               </button>
             </div>
             <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
-              {data.summaryText}
+              {summaryText}
             </p>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Summarised from {summarySourceCount.toLocaleString()} approved

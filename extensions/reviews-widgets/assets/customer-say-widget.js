@@ -441,6 +441,58 @@
     return data;
   }
 
+  function isPlaceholderSummary(text) {
+    var value = String(text || "").trim().toLowerCase();
+    if (!value) return true;
+    return (
+      value.indexOf("no verified reviews yet") >= 0 ||
+      value.indexOf("no published reviews yet") >= 0 ||
+      value.indexOf("no summary available") >= 0 ||
+      value.indexOf("loading customer summary") >= 0 ||
+      (value.indexOf("no approved reviews yet") >= 0 &&
+        value.indexOf("shoppers") < 0)
+    );
+  }
+
+  function quoteFromReview(review) {
+    return String(review.body || review.title || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function fallbackSummaryFromPayload(data, reviewCount) {
+    var title = data.productTitle || "this product";
+    var reviews = Array.isArray(data.reviews) ? data.reviews : [];
+    var quotes = reviews
+      .map(quoteFromReview)
+      .filter(Boolean)
+      .slice(0, 4);
+    if (!quotes.length) {
+      return (
+        "Customers have " +
+        reviewCount +
+        " approved review" +
+        (reviewCount === 1 ? "" : "s") +
+        " of the " +
+        title +
+        "."
+      );
+    }
+    return (
+      "Shoppers reviewing the " +
+      title +
+      " mention " +
+      quotes.map(function (quote) {
+        return "“" + quote + "”";
+      }).join(" ") +
+      " Across " +
+      reviewCount +
+      " approved review" +
+      (reviewCount === 1 ? "" : "s") +
+      "."
+    );
+  }
+
   function applySummary(root, data, starColor) {
     var average = root.querySelector("[data-outrage-average]");
     var scoreStars = root.querySelector("[data-outrage-score-stars]");
@@ -449,6 +501,21 @@
     var summaryMeta = root.querySelector("[data-outrage-summary-meta]");
     var highlights = root.querySelector("[data-outrage-highlights]");
     var snippets = root.querySelector("[data-outrage-snippets]");
+    var reviews = Array.isArray(data.reviews) ? data.reviews : [];
+    var reviewCount = Math.max(
+      Number(data.count || 0),
+      Number(data.reviewsTotal || 0),
+      Number(data.summarySourceCount || 0),
+      reviews.length,
+    );
+    var sourceCount = Math.max(
+      Number(data.summarySourceCount || 0),
+      reviewCount,
+    );
+    var summary =
+      isPlaceholderSummary(data.summaryText) && reviewCount > 0
+        ? fallbackSummaryFromPayload(data, reviewCount)
+        : data.summaryText || "No summary available yet.";
 
     var rating = data.rating == null ? null : Number(data.rating);
     if (average) {
@@ -459,14 +526,13 @@
       scoreStars.innerHTML = starsHtml(rating || 0, starColor);
     }
     if (verified) {
-      var approvedCount = Number(data.count || data.summarySourceCount || 0);
       verified.textContent =
-        approvedCount.toLocaleString() +
+        reviewCount.toLocaleString() +
         " approved review" +
-        (approvedCount === 1 ? "" : "s");
+        (reviewCount === 1 ? "" : "s");
     }
     if (summaryText) {
-      summaryText.textContent = data.summaryText || "No summary available yet.";
+      summaryText.textContent = summary;
     }
     if (summaryMeta) {
       var month =
@@ -475,7 +541,7 @@
         "";
       summaryMeta.textContent =
         "Summarised from " +
-        Number(data.summarySourceCount || 0).toLocaleString() +
+        sourceCount.toLocaleString() +
         " approved reviews" +
         (month ? " • " + month : "");
       summaryMeta.hidden = false;

@@ -29,7 +29,7 @@ const widgetCatalog = [
     title: "What customers say",
     badge: null as string | null,
     description:
-      "AI-style summary of recent verified reviews with theme tags, quote snippets, and expandable full review list.",
+      "AI summary of approved reviews, including short 1–2 word comments, with theme tags and an expandable review list.",
     active: true,
   },
 ];

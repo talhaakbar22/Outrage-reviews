@@ -89,20 +89,24 @@ export async function generateCursorReviewSummary(input: {
     await writeFile(join(workspace, ".gitkeep"), "", "utf8");
 
     const prompt = [
-      "You summarize approved customer reviews for a Shopify product page.",
-      "Use every approved review provided. Do not filter by verified purchase.",
+      "You summarize ALL approved customer reviews for a Shopify product page.",
+      "Include every review, even if the comment is only one or two words (for example “Nice” or “MHG”).",
+      "Short reviews still count: use their star rating plus the words they wrote.",
+      "If most comments are 1-2 words, still write 2-4 full sentences from those words and the ratings.",
+      "Do not skip short reviews. Do not filter by verified purchase. Do not wait for longer comments.",
       "Do not use tools. Do not edit files. Reply with JSON only.",
       "JSON shape: {\"summary\":\"...\",\"highlights\":[{\"label\":\"...\",\"count\":1}]}",
-      "Write 2-4 sentences in a natural merchant voice. Mention concrete themes from the reviews.",
-      "Do not invent facts that are not in the reviews. Do not mention AI or verified purchases.",
+      "Write 2-4 sentences in a natural merchant voice covering the overall rating and what shoppers said.",
+      "Do not invent details that are not in the reviews. Do not mention AI or verified purchases.",
       `Product: ${input.productTitle}`,
       `Approved review count: ${input.reviews.length}`,
-      "Reviews:",
+      "Reviews (rating, title, body):",
       JSON.stringify(
-        input.reviews.map((review) => ({
+        input.reviews.map((review, index) => ({
+          n: index + 1,
           rating: review.rating,
-          title: review.title,
-          body: review.body,
+          title: review.title || "",
+          body: review.body || "",
         })),
       ),
     ].join("\n");
