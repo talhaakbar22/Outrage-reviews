@@ -8,6 +8,7 @@ export type ReviewEmailPayload = {
   reviewUrl: string;
   kind: ReviewEmailKind;
   productUrl?: string | null;
+  productImageUrl?: string | null;
 };
 
 export type ConversationMessage = {

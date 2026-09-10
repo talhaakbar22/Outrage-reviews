@@ -290,7 +290,7 @@ export async function sendThankYouEmail(input: {
       shopId: input.shopId,
     })
       .include("product", (product) =>
-        product.select("id", "title", "handle"),
+        product.select("id", "title", "handle", "imageUrl"),
       )
       .first(),
   ]);
@@ -316,13 +316,21 @@ export async function sendThankYouEmail(input: {
       })
     : null;
 
+  if (!productUrl) {
+    console.warn(
+      `[email] thank-you for ${input.reviewId}: product has no public handle; skipping storefront CTA`,
+    );
+  }
+
   await sendReviewEmail({
     to,
     shopName: shop.name ?? shop.shopifyDomain,
     productTitle: product?.title ?? "your purchase",
     customerName: review.reviewerName,
+    // Thank-you CTAs must use the public storefront product URL only.
     reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
     productUrl,
+    productImageUrl: product?.imageUrl ?? null,
     kind: "thank_you" satisfies ReviewEmailKind,
   });
 
