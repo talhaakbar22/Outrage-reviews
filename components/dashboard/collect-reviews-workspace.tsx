@@ -339,8 +339,9 @@ export function CollectReviewsWorkspace({
 
             <div className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
               Needs Redis + workers: <code>yarn worker:webhooks</code> and{" "}
-              <code>yarn worker:email</code>. For real sends set{" "}
-              <code>EMAIL_PROVIDER=resend</code> and <code>RESEND_API_KEY</code>.
+              <code>yarn worker:email</code>. For caught test emails set{" "}
+              <code>EMAIL_PROVIDER=mailtrap</code> with{" "}
+              <code>MAILTRAP_USER</code> / <code>MAILTRAP_PASS</code>.
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

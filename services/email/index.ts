@@ -4,7 +4,7 @@ export type {
   ReviewEmailKind,
   ReviewEmailPayload,
 } from "./types";
-export { buildMerchantReplyEmail, buildReviewEmail } from "./templates";
+export { buildMerchantReplyEmail, buildReviewEmail, buildThankYouEmail } from "./templates";
 export { sendMerchantReplyEmailMessage, sendReviewEmail } from "./send";
 export {
   sendMerchantReplyEmail,

@@ -56,13 +56,20 @@ export const env = {
     Number(process.env.MEDIA_UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024),
   mediaPresignExpiresSeconds: () =>
     Number(process.env.MEDIA_PRESIGN_EXPIRES_SECONDS ?? 900),
-  emailProvider: (): "console" | "resend" => {
+  emailProvider: (): "console" | "mailtrap" | "resend" => {
     const value = (process.env.EMAIL_PROVIDER ?? "console").toLowerCase();
-    return value === "resend" ? "resend" : "console";
+    if (value === "mailtrap") return "mailtrap";
+    if (value === "resend") return "resend";
+    return "console";
   },
-  resendApiKey: () => required("RESEND_API_KEY"),
   emailFrom: () =>
-    process.env.EMAIL_FROM ?? "Outrage Reviews <onboarding@resend.dev>",
+    process.env.EMAIL_FROM ?? "Outrage Reviews <noreply@example.com>",
+  mailtrapHost: () =>
+    process.env.MAILTRAP_HOST ?? "sandbox.smtp.mailtrap.io",
+  mailtrapPort: () => Number(process.env.MAILTRAP_PORT ?? 2525),
+  mailtrapUser: () => required("MAILTRAP_USER"),
+  mailtrapPass: () => required("MAILTRAP_PASS"),
+  resendApiKey: () => required("RESEND_API_KEY"),
   /** Optional ms override for local testing (skips day-based delays). */
   reviewRequestDelayMs: () => {
     const raw = process.env.REVIEW_REQUEST_DELAY_MS;
