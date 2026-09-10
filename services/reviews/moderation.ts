@@ -459,7 +459,9 @@ export async function replyToReview(input: {
         console.log(
           `[email] skipped merchant reply email for ${review.id}: ${result.reason}`,
         );
+        return;
       }
+      console.log(`[email] sent merchant reply email for ${review.id}`);
     })
     .catch((error) => {
       console.error(

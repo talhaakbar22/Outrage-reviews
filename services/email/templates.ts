@@ -214,6 +214,8 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
   const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
   const shopName = payload.shopName;
   const productTitle = payload.productTitle;
+  const productUrl = payload.productUrl;
+  const productImageUrl = payload.productImageUrl?.trim() || null;
 
   const subject = `${shopName} replied to your review of ${productTitle}`;
 
@@ -241,13 +243,13 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
     textLines.push("");
   }
 
-  if (payload.productUrl) {
-    textLines.push(`View the product: ${payload.productUrl}`);
+  if (productUrl) {
+    textLines.push(`View the product: ${productUrl}`);
     textLines.push("");
   }
 
   textLines.push(
-    "If you have more to share, you can reply to this email or leave another note with the store.",
+    "If you have more to share, you can leave another note with the store.",
   );
   textLines.push("");
   textLines.push(`— ${shopName}`);
@@ -259,56 +261,123 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
         ? message.authorName || shopName
         : message.authorName || "You";
       const badge = isStore ? "Store reply" : "Your review";
-      const bg = isStore ? "#f4f4f5" : "#ffffff";
-      const border = isStore ? "#e4e4e7" : "#d4d4d8";
+      const bg = isStore ? "#18181b" : "#ffffff";
+      const textColor = isStore ? "#fafafa" : "#27272a";
+      const mutedColor = isStore ? "#a1a1aa" : "#71717a";
+      const border = isStore ? "#18181b" : "#e4e4e7";
       const ratingHtml =
         !isStore && message.rating
-          ? `<p style="margin: 0 0 8px; font-size: 14px; letter-spacing: 0.04em; color: #18181b;">${formatStars(message.rating)}</p>`
+          ? `<p style="margin: 0 0 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; letter-spacing: 0.04em; color: #18181b;">${formatStars(message.rating)}</p>`
           : "";
       const when = message.sentAt
-        ? `<span style="color: #71717a; font-weight: 400;"> · ${escapeHtml(message.sentAt)}</span>`
+        ? `<span style="color: ${mutedColor}; font-weight: 400;"> · ${escapeHtml(message.sentAt)}</span>`
         : "";
 
-      return `<div style="margin: 0 0 14px; background: ${bg}; border: 1px solid ${border}; border-radius: 14px; padding: 16px 18px;">
-  <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #71717a;">${escapeHtml(badge)}</p>
-  <p style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #18181b;">${escapeHtml(who)}${when}</p>
+      return `<div style="margin: 0 0 14px; background: ${bg}; border: 1px solid ${border}; border-radius: 16px; padding: 16px 18px;">
+  <p style="margin: 0 0 4px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${mutedColor};">${escapeHtml(badge)}</p>
+  <p style="margin: 0 0 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; color: ${isStore ? "#ffffff" : "#18181b"};">${escapeHtml(who)}${when}</p>
   ${ratingHtml}
-  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #27272a; white-space: pre-wrap;">${nl2br(message.body)}</p>
+  <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.65; color: ${textColor}; white-space: pre-wrap;">${nl2br(message.body)}</p>
 </div>`;
     })
     .join("");
 
-  const productLinkHtml = payload.productUrl
-    ? `<p style="margin: 0 0 24px;">
-        <a href="${escapeHtml(payload.productUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
-          View ${escapeHtml(productTitle)}
-        </a>
-      </p>`
+  const productImageHtml = productImageUrl
+    ? `<img
+         src="${escapeHtml(productImageUrl)}"
+         alt="${escapeHtml(productTitle)}"
+         width="88"
+         height="88"
+         style="display: block; width: 88px; height: 88px; object-fit: cover; border-radius: 12px; border: 0;"
+       />`
+    : `<div style="width: 88px; height: 88px; border-radius: 12px; background: linear-gradient(145deg, #f4f4f5 0%, #e4e4e7 100%);"></div>`;
+
+  const productRowInner = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="88" valign="middle" style="padding-right: 16px;">
+          ${productImageHtml}
+        </td>
+        <td valign="middle">
+          <p style="margin: 0 0 4px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a;">
+            Product
+          </p>
+          <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.35; color: #18181b;">
+            ${escapeHtml(productTitle)}
+          </p>
+          ${
+            productUrl
+              ? `<p style="margin: 8px 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; color: #18181b;">
+                   View on store →
+                 </p>`
+              : ""
+          }
+        </td>
+      </tr>
+    </table>`;
+
+  const productCardHtml = productUrl
+    ? `<a href="${escapeHtml(productUrl)}" style="display: block; text-decoration: none; color: inherit; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 16px; padding: 14px; margin: 0 0 24px;">
+         ${productRowInner}
+       </a>`
+    : `<div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 16px; padding: 14px; margin: 0 0 24px;">
+         ${productRowInner}
+       </div>`;
+
+  const ctaHtml = productUrl
+    ? `<p style="margin: 8px 0 24px; text-align: center;">
+         <a href="${escapeHtml(productUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 999px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600;">
+           View product page
+         </a>
+       </p>`
     : "";
 
   const html = `<!DOCTYPE html>
 <html>
-  <body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; line-height: 1.5; color: #18181b; background: #fafafa; padding: 24px;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e4e4e7; border-radius: 18px; overflow: hidden;">
-      <div style="padding: 28px 28px 8px;">
-        <p style="margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a;">${escapeHtml(shopName)}</p>
-        <h1 style="margin: 0 0 12px; font-size: 24px; line-height: 1.25; letter-spacing: -0.02em;">They replied to your review</h1>
-        <p style="margin: 0 0 8px; color: #3f3f46;">${escapeHtml(greeting)}</p>
-        <p style="margin: 0 0 22px; color: #3f3f46;">
-          ${escapeHtml(shopName)} just responded about <strong>${escapeHtml(productTitle)}</strong>. Here’s the full conversation so far.
-        </p>
-      </div>
-      <div style="padding: 0 28px 8px;">
-        ${conversationHtml}
-      </div>
-      <div style="padding: 8px 28px 28px;">
-        ${productLinkHtml}
-        <p style="margin: 0; font-size: 13px; color: #71717a;">
-          You’re receiving this because you left a review for ${escapeHtml(shopName)}.
-        </p>
-        <p style="margin: 18px 0 0; font-size: 13px; color: #71717a;">— ${escapeHtml(shopName)}</p>
-      </div>
-    </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin: 0; padding: 0; background: #ececef; color: #18181b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #ececef; padding: 36px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #e4e4e7; box-shadow: 0 18px 40px rgba(24, 24, 27, 0.06);">
+            <tr>
+              <td style="background: #18181b; padding: 30px 32px 28px;">
+                <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #a1a1aa;">
+                  ${escapeHtml(shopName)}
+                </p>
+                <h1 style="margin: 12px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; line-height: 1.2; font-weight: 400; color: #ffffff; letter-spacing: -0.02em;">
+                  They replied to your review
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <p style="margin: 0 0 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.6; color: #3f3f46;">
+                  ${escapeHtml(greeting)}
+                </p>
+                <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: #3f3f46;">
+                  ${escapeHtml(shopName)} just responded about <strong style="color: #18181b;">${escapeHtml(productTitle)}</strong>. Here’s the full conversation.
+                </p>
+                ${productCardHtml}
+                ${conversationHtml}
+                ${ctaHtml}
+                <p style="margin: 8px 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; line-height: 1.5; color: #71717a;">
+                  You’re receiving this because you left a review for ${escapeHtml(shopName)}.
+                  ${productUrl ? ` Product page: ${escapeHtml(productUrl)}` : ""}
+                </p>
+                <p style="margin: 18px 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #18181b;">
+                  — ${escapeHtml(shopName)}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`;
 

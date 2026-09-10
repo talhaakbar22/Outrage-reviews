@@ -204,7 +204,7 @@ export async function sendMerchantReplyEmail(input: {
       shopId: input.shopId,
     })
       .include("product", (product) =>
-        product.select("id", "title", "handle", "shopifyProductId"),
+        product.select("id", "title", "handle", "imageUrl"),
       )
       .include("replies", (replies) =>
         replies
@@ -230,6 +230,12 @@ export async function sendMerchantReplyEmail(input: {
   const shopName = shop.name ?? shop.shopifyDomain;
   const product = review.product;
   const productTitle = product?.title ?? "your purchase";
+  const productUrl = product
+    ? productStorefrontUrl({
+        shopifyDomain: shop.shopifyDomain,
+        handle: product.handle,
+      })
+    : null;
 
   const conversation: ConversationMessage[] = [
     {
@@ -264,12 +270,8 @@ export async function sendMerchantReplyEmail(input: {
     shopName,
     shopDomain: shop.shopifyDomain,
     productTitle,
-    productUrl: product
-      ? productStorefrontUrl({
-          shopifyDomain: shop.shopifyDomain,
-          handle: product.handle,
-        })
-      : null,
+    productUrl,
+    productImageUrl: product?.imageUrl ?? null,
     customerName: review.reviewerName,
     conversation,
   });

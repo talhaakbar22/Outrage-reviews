@@ -25,6 +25,7 @@ export type MerchantReplyEmailPayload = {
   shopDomain: string;
   productTitle: string;
   productUrl: string | null;
+  productImageUrl?: string | null;
   customerName: string | null;
   conversation: ConversationMessage[];
 };
