@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Overview", exact: true },
   { href: "/dashboard/reviews", label: "Manage reviews" },
+  { href: "/dashboard/collect", label: "Collect reviews" },
   { href: "/dashboard/widgets", label: "Widgets" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/media", label: "Media" },
