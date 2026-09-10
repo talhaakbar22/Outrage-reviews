@@ -64,14 +64,14 @@ const EMAIL_TYPES = [
     id: "photo",
     title: "Photo/video reminder",
     description:
-      "Encourage customers who left a text review to add a photo or video.",
-    status: "Coming soon",
+      "Encourage customers who left a text review to add a photo or video (3 days later).",
+    status: "Active",
   },
   {
     id: "thanks",
     title: "Thank you email",
     description: "Thank customers after they submit a product review.",
-    status: "Coming soon",
+    status: "Active",
   },
 ] as const;
 
@@ -270,7 +270,8 @@ export function CollectReviewsWorkspace({
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Review requests are created when an order is marked delivered,
-                then sent after your delay.
+                then sent after your delay. Thank-you emails send right after a
+                review; photo/video reminders wait 3 days for text-only reviews.
               </p>
             </div>
 
@@ -392,7 +393,12 @@ export function CollectReviewsWorkspace({
                   <button
                     type="button"
                     onClick={() => {
-                      if (item.id === "request" || item.id === "reminder") {
+                      if (
+                        item.id === "request" ||
+                        item.id === "reminder" ||
+                        item.id === "photo" ||
+                        item.id === "thanks"
+                      ) {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }
                     }}

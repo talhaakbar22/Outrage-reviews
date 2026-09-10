@@ -27,25 +27,43 @@ export function buildReviewEmail(payload: ReviewEmailPayload) {
   const shopName = payload.shopName;
   const productTitle = payload.productTitle;
   const isReminder = payload.kind === "reminder";
+  const isThankYou = payload.kind === "thank_you";
+  const isPhotoReminder = payload.kind === "photo_reminder";
 
-  const subject = isReminder
-    ? `Reminder: how was your ${productTitle}?`
-    : `How was your ${productTitle}?`;
+  const subject = isThankYou
+    ? `Thanks for reviewing ${productTitle}`
+    : isPhotoReminder
+      ? `Add a photo to your ${productTitle} review?`
+      : isReminder
+        ? `Reminder: how was your ${productTitle}?`
+        : `How was your ${productTitle}?`;
 
-  const intro = isReminder
-    ? `Just a quick reminder from ${shopName} — we'd still love your thoughts on ${productTitle}.`
-    : `Thanks for shopping with ${shopName}. How was your ${productTitle}?`;
+  const intro = isThankYou
+    ? `Thank you for sharing your experience with ${productTitle} from ${shopName}. Your feedback helps other shoppers and means a lot to us.`
+    : isPhotoReminder
+      ? `Thanks again for reviewing ${productTitle}. Photos and videos make reviews even more helpful — if you have a moment, we’d love to see yours.`
+      : isReminder
+        ? `Just a quick reminder from ${shopName} — we'd still love your thoughts on ${productTitle}.`
+        : `Thanks for shopping with ${shopName}. How was your ${productTitle}?`;
+
+  const ctaLabel = isThankYou
+    ? "View product"
+    : isPhotoReminder
+      ? "Add a photo or video"
+      : "Write a review";
+  const ctaUrl = payload.productUrl || payload.reviewUrl;
 
   const text = [
     greeting,
     "",
     intro,
     "",
-    `Leave a review: ${payload.reviewUrl}`,
+    `${ctaLabel}: ${ctaUrl}`,
     "",
-    "This link is unique to your purchase and expires after a while.",
-    "",
-    `— ${shopName}`,
+    isThankYou || isPhotoReminder
+      ? `— ${shopName}`
+      : "This link is unique to your purchase and expires after a while.",
+    ...(isThankYou || isPhotoReminder ? [] : ["", `— ${shopName}`]),
   ].join("\n");
 
   const html = `<!DOCTYPE html>
@@ -55,12 +73,12 @@ export function buildReviewEmail(payload: ReviewEmailPayload) {
       <p style="margin: 0 0 16px;">${escapeHtml(greeting)}</p>
       <p style="margin: 0 0 24px;">${escapeHtml(intro)}</p>
       <p style="margin: 0 0 28px;">
-        <a href="${escapeHtml(payload.reviewUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
-          Write a review
+        <a href="${escapeHtml(ctaUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
+          ${escapeHtml(ctaLabel)}
         </a>
       </p>
       <p style="margin: 0; font-size: 13px; color: #71717a;">
-        Or open this link: ${escapeHtml(payload.reviewUrl)}
+        Or open this link: ${escapeHtml(ctaUrl)}
       </p>
       <p style="margin: 24px 0 0; font-size: 13px; color: #71717a;">— ${escapeHtml(shopName)}</p>
     </div>

@@ -8,8 +8,12 @@ export const LOOX_IMPORT_QUEUE_NAME = "loox-import";
 export const MEDIA_QUEUE_NAME = "review-media";
 export const REVIEW_REQUEST_QUEUE_NAME = "review-request";
 export const REVIEW_REMINDER_QUEUE_NAME = "review-reminder";
+export const PHOTO_REMINDER_QUEUE_NAME = "photo-reminder";
 export const AI_SUMMARY_QUEUE_NAME = "ai-summary";
 export const SHOPIFY_RATINGS_QUEUE_NAME = "shopify-ratings";
+
+/** Default delay before asking for photos on a text-only review. */
+export const DEFAULT_PHOTO_REMINDER_DELAY_DAYS = 3;
 
 export type WebhookJobData = { eventId: string };
 export type SyncJobData = { shopId: string };
@@ -28,6 +32,10 @@ export type ReviewReminderJobData = {
   requestId: string;
   rawToken: string;
 };
+export type PhotoReminderJobData = {
+  reviewId: string;
+  shopId: string;
+};
 export type AiSummaryJobData = {
   shopId: string;
   productId: string;
@@ -43,6 +51,7 @@ let looxImportQueue: Queue<LooxImportJobData> | undefined;
 let mediaQueue: Queue<MediaProcessingJobData> | undefined;
 let reviewRequestQueue: Queue<ReviewRequestJobData> | undefined;
 let reviewReminderQueue: Queue<ReviewReminderJobData> | undefined;
+let photoReminderQueue: Queue<PhotoReminderJobData> | undefined;
 let aiSummaryQueue: Queue<AiSummaryJobData> | undefined;
 let shopifyRatingsQueue: Queue<ShopifyRatingsJobData> | undefined;
 
@@ -217,6 +226,21 @@ export function getReviewReminderQueue() {
   return reviewReminderQueue;
 }
 
+export function getPhotoReminderQueue() {
+  if (!photoReminderQueue) {
+    photoReminderQueue = new Queue<PhotoReminderJobData>(PHOTO_REMINDER_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: {
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+      },
+    });
+  }
+  return photoReminderQueue;
+}
+
 export function getAiSummaryQueue() {
   if (!aiSummaryQueue) {
     aiSummaryQueue = new Queue<AiSummaryJobData>(AI_SUMMARY_QUEUE_NAME, {
@@ -238,6 +262,10 @@ export function reviewRequestJobId(requestId: string) {
 
 export function reviewReminderJobId(requestId: string) {
   return `review-reminder-${requestId}`;
+}
+
+export function photoReminderJobId(reviewId: string) {
+  return `photo-reminder-${reviewId}`;
 }
 
 export async function enqueueReviewRequest(input: {
@@ -329,6 +357,39 @@ export async function cancelReviewEmailJobs(requestId: string) {
       await reminderJob.remove();
     }
   }
+}
+
+export async function enqueuePhotoReminder(input: {
+  reviewId: string;
+  shopId: string;
+  delayDays?: number;
+}) {
+  const delay =
+    env.photoReminderDelayMs() ??
+    daysToDelayMs(input.delayDays ?? DEFAULT_PHOTO_REMINDER_DELAY_DAYS);
+
+  if (env.skipBackgroundQueue()) {
+    if (delay > 0) {
+      console.warn(
+        `SKIP_BACKGROUND_QUEUE=true: sending photo reminder immediately (configured delay ${delay}ms ignored)`,
+      );
+    }
+    const { sendPhotoReminderEmail } = await import("@/services/email/delivery");
+    await sendPhotoReminderEmail({
+      reviewId: input.reviewId,
+      shopId: input.shopId,
+    });
+    return;
+  }
+
+  await getPhotoReminderQueue().add(
+    "send",
+    { reviewId: input.reviewId, shopId: input.shopId },
+    {
+      jobId: photoReminderJobId(input.reviewId),
+      delay,
+    },
+  );
 }
 
 export async function enqueueAiSummary(input: {

@@ -153,6 +153,28 @@ export async function submitReviewFromToken(
     await publishProductRatings(context.product.id);
   }
 
+  void import("@/services/email/delivery")
+    .then(({ schedulePostSubmissionEmails }) =>
+      schedulePostSubmissionEmails({
+        shopId: context.shop.id,
+        reviewId: review.id,
+        hasMedia: input.media.length > 0,
+      }),
+    )
+    .then((result) => {
+      if (!result.thankYou.sent) {
+        console.log(
+          `[email] skipped thank-you email for ${review.id}: ${result.thankYou.reason}`,
+        );
+      }
+    })
+    .catch((error) => {
+      console.error(
+        `[email] post-submission emails failed for ${review.id}:`,
+        error,
+      );
+    });
+
   return {
     reviewId: review.id,
     status,

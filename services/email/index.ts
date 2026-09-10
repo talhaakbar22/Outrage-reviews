@@ -8,6 +8,9 @@ export { buildMerchantReplyEmail, buildReviewEmail } from "./templates";
 export { sendMerchantReplyEmailMessage, sendReviewEmail } from "./send";
 export {
   sendMerchantReplyEmail,
+  sendPhotoReminderEmail,
   sendReviewRequestEmail,
   sendReviewReminderEmail,
+  sendThankYouEmail,
+  schedulePostSubmissionEmails,
 } from "./delivery";

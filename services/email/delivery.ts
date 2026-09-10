@@ -3,6 +3,8 @@ import { buildReviewRequestUrl } from "@/lib/review-token";
 import {
   enqueueReviewReminder,
   cancelReviewEmailJobs,
+  enqueuePhotoReminder,
+  DEFAULT_PHOTO_REMINDER_DELAY_DAYS,
 } from "@/lib/queue";
 import {
   sendMerchantReplyEmailMessage,
@@ -273,4 +275,140 @@ export async function sendMerchantReplyEmail(input: {
   });
 
   return { sent: true as const };
+}
+
+export async function sendThankYouEmail(input: {
+  shopId: string;
+  reviewId: string;
+}) {
+  const db = getDb();
+  const [settings, shop, review] = await Promise.all([
+    db.orm.public.ShopSettings.where({ shopId: input.shopId }).first(),
+    db.orm.public.Shop.where({ id: input.shopId }).first(),
+    db.orm.public.Review.where({
+      id: input.reviewId,
+      shopId: input.shopId,
+    })
+      .include("product", (product) =>
+        product.select("id", "title", "handle"),
+      )
+      .first(),
+  ]);
+
+  if (!settings?.emailEnabled) {
+    return { sent: false as const, reason: "email_disabled" };
+  }
+
+  if (!shop || !review) {
+    return { sent: false as const, reason: "missing_review" };
+  }
+
+  const to = review.reviewerEmail?.trim() || null;
+  if (!to) {
+    return { sent: false as const, reason: "missing_reviewer_email" };
+  }
+
+  const product = review.product;
+  const productUrl = product
+    ? productStorefrontUrl({
+        shopifyDomain: shop.shopifyDomain,
+        handle: product.handle,
+      })
+    : null;
+
+  await sendReviewEmail({
+    to,
+    shopName: shop.name ?? shop.shopifyDomain,
+    productTitle: product?.title ?? "your purchase",
+    customerName: review.reviewerName,
+    reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
+    productUrl,
+    kind: "thank_you" satisfies ReviewEmailKind,
+  });
+
+  return { sent: true as const };
+}
+
+export async function sendPhotoReminderEmail(input: {
+  shopId: string;
+  reviewId: string;
+}) {
+  const db = getDb();
+  const [settings, shop, review, existingMedia] = await Promise.all([
+    db.orm.public.ShopSettings.where({ shopId: input.shopId }).first(),
+    db.orm.public.Shop.where({ id: input.shopId }).first(),
+    db.orm.public.Review.where({
+      id: input.reviewId,
+      shopId: input.shopId,
+    })
+      .include("product", (product) =>
+        product.select("id", "title", "handle"),
+      )
+      .first(),
+    db.orm.public.ReviewMedia.where({ reviewId: input.reviewId })
+      .select("id")
+      .first(),
+  ]);
+
+  if (!settings?.emailEnabled) {
+    return { sent: false as const, reason: "email_disabled" };
+  }
+
+  if (!shop || !review) {
+    return { sent: false as const, reason: "missing_review" };
+  }
+
+  if (existingMedia) {
+    return { sent: false as const, reason: "already_has_media" };
+  }
+
+  const to = review.reviewerEmail?.trim() || null;
+  if (!to) {
+    return { sent: false as const, reason: "missing_reviewer_email" };
+  }
+
+  const product = review.product;
+  const productUrl = product
+    ? productStorefrontUrl({
+        shopifyDomain: shop.shopifyDomain,
+        handle: product.handle,
+      })
+    : null;
+
+  await sendReviewEmail({
+    to,
+    shopName: shop.name ?? shop.shopifyDomain,
+    productTitle: product?.title ?? "your purchase",
+    customerName: review.reviewerName,
+    reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
+    productUrl,
+    kind: "photo_reminder" satisfies ReviewEmailKind,
+  });
+
+  return { sent: true as const };
+}
+
+/**
+ * After a customer submits a review: thank them, and if they left text only,
+ * schedule a photo/video reminder a few days later.
+ */
+export async function schedulePostSubmissionEmails(input: {
+  shopId: string;
+  reviewId: string;
+  hasMedia: boolean;
+}) {
+  const thankYou = await sendThankYouEmail({
+    shopId: input.shopId,
+    reviewId: input.reviewId,
+  });
+
+  if (!input.hasMedia) {
+    await enqueuePhotoReminder({
+      shopId: input.shopId,
+      reviewId: input.reviewId,
+      delayDays: DEFAULT_PHOTO_REMINDER_DELAY_DAYS,
+    });
+  }
+
+  return { thankYou };
 }

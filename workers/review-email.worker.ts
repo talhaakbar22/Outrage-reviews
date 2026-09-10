@@ -2,12 +2,15 @@ import { config } from "dotenv";
 import { Worker } from "bullmq";
 import { getRedisConnection } from "../lib/redis";
 import {
+  PHOTO_REMINDER_QUEUE_NAME,
   REVIEW_REQUEST_QUEUE_NAME,
   REVIEW_REMINDER_QUEUE_NAME,
+  type PhotoReminderJobData,
   type ReviewRequestJobData,
   type ReviewReminderJobData,
 } from "../lib/queue";
 import {
+  sendPhotoReminderEmail,
   sendReviewRequestEmail,
   sendReviewReminderEmail,
 } from "../services/email/delivery";
@@ -29,6 +32,17 @@ const reminderWorker = new Worker<ReviewReminderJobData>(
   REVIEW_REMINDER_QUEUE_NAME,
   async (job) => {
     await sendReviewReminderEmail(job.data);
+  },
+  {
+    connection: getRedisConnection(),
+    concurrency: 5,
+  },
+);
+
+const photoReminderWorker = new Worker<PhotoReminderJobData>(
+  PHOTO_REMINDER_QUEUE_NAME,
+  async (job) => {
+    await sendPhotoReminderEmail(job.data);
   },
   {
     connection: getRedisConnection(),
@@ -58,6 +72,17 @@ reminderWorker.on("failed", (job, error) => {
   );
 });
 
+photoReminderWorker.on("completed", (job) => {
+  console.log(`Sent photo reminder email for ${job.data.reviewId}`);
+});
+
+photoReminderWorker.on("failed", (job, error) => {
+  console.error(
+    `Photo reminder email failed for ${job?.data.reviewId ?? "unknown"}:`,
+    error,
+  );
+});
+
 console.log(
-  `Review email workers listening on "${REVIEW_REQUEST_QUEUE_NAME}" and "${REVIEW_REMINDER_QUEUE_NAME}"`,
+  `Review email workers listening on "${REVIEW_REQUEST_QUEUE_NAME}", "${REVIEW_REMINDER_QUEUE_NAME}", and "${PHOTO_REMINDER_QUEUE_NAME}"`,
 );
