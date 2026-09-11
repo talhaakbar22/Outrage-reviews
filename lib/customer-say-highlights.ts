@@ -11,6 +11,15 @@ export type SummaryHighlight = {
   reviewIds?: string[];
 };
 
+type LabelMatcher = {
+  match: RegExp;
+  patterns: RegExp[];
+  minRating?: number;
+  maxRating?: number;
+  /** If true, rating band alone is enough when text is short/empty. */
+  ratingOnlyOk?: boolean;
+};
+
 const THEME_PATTERNS: Array<{ label: string; patterns: RegExp[] }> = [
   {
     label: "Great quality for the price",
@@ -38,8 +47,11 @@ const THEME_PATTERNS: Array<{ label: string; patterns: RegExp[] }> = [
   },
 ];
 
+const POSITIVE_WORDS =
+  /\b(nice|good|great|happy|pleased|satisfied|positive|recommend|like[sd]?|love[d]?|amazing|excellent|awesome|wonderful|perfect|enjoy)\b/i;
+
 /** Extra matchers for common AI-written highlight labels. */
-const LABEL_PATTERN_ALIASES: Array<{ match: RegExp; patterns: RegExp[]; minRating?: number }> = [
+const LABEL_PATTERN_ALIASES: LabelMatcher[] = [
   {
     match: /strong\s+enthusiasm|very\s+enthusias|love\s+it|loved\s+it/i,
     patterns: [
@@ -47,16 +59,25 @@ const LABEL_PATTERN_ALIASES: Array<{ match: RegExp; patterns: RegExp[]; minRatin
       /!{2,}/,
     ],
     minRating: 5,
+    ratingOnlyOk: true,
   },
   {
-    match: /positive\s+overall|overall\s+impression|generally\s+positive|positive\s+feedback/i,
-    patterns: [
-      /\b(nice|good|great|happy|pleased|satisfied|positive|recommend|like[sd]?)\b/i,
-    ],
+    match:
+      /positive\s+overall|overall\s+impression|generally\s+positive|positive\s+feedback|high\s+satisfaction/i,
+    patterns: [POSITIVE_WORDS],
     minRating: 4,
+    ratingOnlyOk: true,
   },
   {
-    match: /would\s+buy\s+again|buy\s+again|repurchase|come\s+back/i,
+    match: /positive\s+tone.*moderate|moderate\s+rating/i,
+    patterns: [POSITIVE_WORDS],
+    minRating: 3,
+    maxRating: 4,
+    ratingOnlyOk: true,
+  },
+  {
+    match:
+      /would\s+buy\s+again|buy\s+again|repurchase|come\s+back|repeat\s+purchase|purchase\s+intent/i,
     patterns: [
       /buy\s+again/i,
       /purchase\s+again/i,
@@ -65,6 +86,7 @@ const LABEL_PATTERN_ALIASES: Array<{ match: RegExp; patterns: RegExp[]; minRatin
       /repurchase/i,
       /will\s+buy/i,
       /definitely\s+buy/i,
+      /again/i,
     ],
   },
   {
@@ -89,6 +111,7 @@ const STOPWORDS = new Set([
   "a",
   "an",
   "and",
+  "at",
   "for",
   "from",
   "in",
@@ -107,13 +130,25 @@ const STOPWORDS = new Set([
   "reviews",
   "shoppers",
   "product",
+  "tone",
+  "intent",
+  "ratings",
+  "rating",
+  "moderate",
+  "high",
+  "positive",
 ]);
 
 function reviewText(review: HighlightReviewRef) {
   return `${review.title ?? ""} ${review.body ?? ""}`.replace(/\s+/g, " ").trim();
 }
 
-function patternsForLabel(label: string): { patterns: RegExp[]; minRating?: number } {
+function patternsForLabel(label: string): {
+  patterns: RegExp[];
+  minRating?: number;
+  maxRating?: number;
+  ratingOnlyOk?: boolean;
+} {
   const exact = THEME_PATTERNS.find(
     (theme) => theme.label.toLowerCase() === label.trim().toLowerCase(),
   );
@@ -121,7 +156,12 @@ function patternsForLabel(label: string): { patterns: RegExp[]; minRating?: numb
 
   for (const alias of LABEL_PATTERN_ALIASES) {
     if (alias.match.test(label)) {
-      return { patterns: alias.patterns, minRating: alias.minRating };
+      return {
+        patterns: alias.patterns,
+        minRating: alias.minRating,
+        maxRating: alias.maxRating,
+        ratingOnlyOk: alias.ratingOnlyOk,
+      };
     }
   }
 
@@ -142,23 +182,56 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function ratingInBand(
+  rating: number,
+  minRating?: number,
+  maxRating?: number,
+) {
+  if (minRating != null && rating < minRating) return false;
+  if (maxRating != null && rating > maxRating) return false;
+  return true;
+}
+
 export function reviewMatchesHighlight(
   review: HighlightReviewRef,
   label: string,
 ): boolean {
-  const { patterns, minRating } = patternsForLabel(label);
+  const { patterns, minRating, maxRating, ratingOnlyOk } =
+    patternsForLabel(label);
   const text = reviewText(review);
   const rating = Number(review.rating) || 0;
 
-  if (patterns.length === 0) {
-    return minRating != null ? rating >= minRating : false;
+  if (!ratingInBand(rating, minRating, maxRating)) {
+    // Text can still match even outside the soft rating band for repurchase etc.
+    if (minRating != null || maxRating != null) {
+      if (patterns.length === 0) return false;
+      return patterns.some((pattern) => pattern.test(text));
+    }
   }
 
-  const textHit = patterns.some((pattern) => pattern.test(text));
-  if (textHit) return true;
+  if (patterns.length === 0) {
+    return minRating != null || maxRating != null
+      ? ratingInBand(rating, minRating, maxRating)
+      : false;
+  }
 
-  // Soft fallback for enthusiasm / positive badges with little text.
-  if (minRating != null && rating >= minRating && text.length > 0 && text.length <= 40) {
+  if (patterns.some((pattern) => pattern.test(text))) return true;
+
+  if (
+    ratingOnlyOk &&
+    ratingInBand(rating, minRating, maxRating) &&
+    text.length <= 80
+  ) {
+    return true;
+  }
+
+  if (
+    minRating != null &&
+    rating >= minRating &&
+    (maxRating == null || rating <= maxRating) &&
+    text.length > 0 &&
+    text.length <= 40
+  ) {
     return true;
   }
 
@@ -179,13 +252,14 @@ export function enrichHighlightsWithReviewIds(
   reviews: HighlightReviewRef[],
 ): SummaryHighlight[] {
   return highlights.map((item) => {
+    const fromPayload = (item.reviewIds ?? []).filter(Boolean);
     const reviewIds =
-      item.reviewIds && item.reviewIds.length > 0
-        ? item.reviewIds
+      fromPayload.length > 0
+        ? fromPayload
         : collectReviewIdsForHighlight(item.label, reviews);
     return {
       label: item.label,
-      count: Math.max(item.count, reviewIds.length) || item.count,
+      count: item.count > 0 ? item.count : reviewIds.length,
       reviewIds,
     };
   });
@@ -194,10 +268,6 @@ export function enrichHighlightsWithReviewIds(
 export function buildHeuristicHighlights(
   reviews: HighlightReviewRef[],
 ): SummaryHighlight[] {
-  const bodies = reviews
-    .map((review) => reviewText(review))
-    .filter((body) => body.length > 0);
-
   return THEME_PATTERNS.map((theme) => {
     const reviewIds = reviews
       .filter((review) =>

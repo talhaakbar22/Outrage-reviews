@@ -95,7 +95,7 @@
           escapeHtml(label) +
           '" data-review-ids="' +
           escapeHtml(reviewIds) +
-          '" aria-pressed="' +
+          '" title="Show matching reviews" aria-pressed="' +
           (active ? "true" : "false") +
           '">' +
           escapeHtml(label) +
@@ -590,6 +590,7 @@
       totalReviewCount: 0,
       loadedOnce: false,
       highlightLabel: null,
+      highlightReviewIds: [],
       highlights: [],
     };
 
@@ -663,6 +664,9 @@
         };
         if (state.highlightLabel) {
           params.highlight = state.highlightLabel;
+        }
+        if (state.highlightReviewIds && state.highlightReviewIds.length) {
+          params.review_ids = state.highlightReviewIds.join(",");
         }
 
         var data = await fetchPayload(root, params);
@@ -744,6 +748,7 @@
       }
       const wasFiltered = Boolean(state.highlightLabel);
       state.highlightLabel = null;
+      state.highlightReviewIds = [];
       state.expanded = true;
       syncFilterBanner();
       syncToggleUi();
@@ -756,20 +761,34 @@
     function closeReviews() {
       state.expanded = false;
       state.highlightLabel = null;
+      state.highlightReviewIds = [];
       syncFilterBanner();
       syncToggleUi();
     }
 
-    async function openHighlight(label) {
+    async function openHighlight(label, reviewIds) {
       var next = String(label || "").trim();
       if (!next) return;
+      var ids = Array.isArray(reviewIds)
+        ? reviewIds.filter(Boolean)
+        : String(reviewIds || "")
+            .split(",")
+            .map(function (id) {
+              return id.trim();
+            })
+            .filter(Boolean);
 
-      if (state.highlightLabel === next && state.expanded) {
+      if (
+        state.highlightLabel === next &&
+        state.expanded &&
+        ids.join(",") === (state.highlightReviewIds || []).join(",")
+      ) {
         scrollToReviews();
         return;
       }
 
       state.highlightLabel = next;
+      state.highlightReviewIds = ids;
       state.expanded = true;
       state.offset = 0;
       state.loadedOnce = false;
@@ -782,6 +801,7 @@
     async function clearHighlightFilter() {
       if (!state.highlightLabel) return;
       state.highlightLabel = null;
+      state.highlightReviewIds = [];
       state.offset = 0;
       state.loadedOnce = false;
       syncFilterBanner();
@@ -813,23 +833,32 @@
         clearHighlightFilter();
       });
     }
-    if (highlightsEl) {
-      highlightsEl.addEventListener("click", function (event) {
-        var target = event.target;
-        var button =
-          target && target.closest
-            ? target.closest("[data-outrage-highlight-tag]")
-            : null;
-        if (!button || !highlightsEl.contains(button)) return;
-        var label = button.getAttribute("data-highlight-label") || "";
-        openHighlight(label);
-      });
-    }
+
+    // Bind on root so badge clicks always work after re-render.
+    root.addEventListener("click", function (event) {
+      var target = event.target;
+      var button =
+        target && target.closest
+          ? target.closest(
+              "[data-outrage-highlight-tag], button.or-customer-say__tag",
+            )
+          : null;
+      if (!button || !root.contains(button)) return;
+      event.preventDefault();
+      var label = button.getAttribute("data-highlight-label") || button.textContent || "";
+      // Strip trailing count number from textContent fallback.
+      label = String(label)
+        .replace(/\s+\d+\s*$/, "")
+        .trim();
+      var ids = button.getAttribute("data-review-ids") || "";
+      openHighlight(label, ids);
+    });
 
     // Keep reviews collapsed until the shopper presses Read all / a badge.
     await loadReviews(false);
     state.expanded = false;
     state.highlightLabel = null;
+    state.highlightReviewIds = [];
     syncFilterBanner();
     syncToggleUi();
   }

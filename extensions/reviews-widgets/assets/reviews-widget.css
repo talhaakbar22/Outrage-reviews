@@ -427,10 +427,17 @@
   font-size: 0.875rem;
   color: inherit;
   cursor: pointer;
+  text-decoration: none;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+button.or-customer-say__tag {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .or-customer-say__tag:hover,

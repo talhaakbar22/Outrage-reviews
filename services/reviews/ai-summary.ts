@@ -232,14 +232,22 @@ export async function generateAndStoreProductSummary(input: {
         })),
       });
 
+      const mappedHighlights =
+        generated.highlights.length > 0
+          ? generated.highlights.map((item) => ({
+              label: item.label,
+              count: item.count,
+              reviewIds: (item.reviewNs ?? [])
+                .map((n) => reviews[n - 1]?.id)
+                .filter((id): id is string => Boolean(id)),
+            }))
+          : highlightsFallback;
+
       const saved = await persistSummary({
         shopId: input.shopId,
         productId: input.productId,
         summaryText: generated.summary,
-        highlights:
-          generated.highlights.length > 0
-            ? generated.highlights
-            : highlightsFallback,
+        highlights: mappedHighlights,
         sentimentScore,
         modelVersion: modelVersionFor(fingerprint),
       });

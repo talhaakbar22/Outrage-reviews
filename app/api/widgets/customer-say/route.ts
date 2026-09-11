@@ -46,30 +46,48 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const highlight = request.nextUrl.searchParams.get("highlight");
+    const reviewIds = (
+      request.nextUrl.searchParams.get("review_ids") ?? ""
+    )
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
     const data = await buildCustomerSayPayload({
       shopId: auth.shop.id,
       shopifyProductId: fallback.shopifyProductId,
       includeReviews:
         request.nextUrl.searchParams.get("expand") === "true" ||
-        Boolean(request.nextUrl.searchParams.get("highlight")),
+        Boolean(highlight) ||
+        reviewIds.length > 0,
       reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
       reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
-      highlightLabel: request.nextUrl.searchParams.get("highlight"),
+      highlightLabel: highlight,
+      highlightReviewIds: reviewIds,
       skipSummary: true,
     });
 
     return NextResponse.json({ ok: true, ...data });
   }
 
+  const highlight = request.nextUrl.searchParams.get("highlight");
+  const reviewIds = (request.nextUrl.searchParams.get("review_ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
   const data = await buildCustomerSayPayload({
     shopId: auth.shop.id,
     shopifyProductId: productId.replace(/\D/g, "") || productId,
     includeReviews:
       request.nextUrl.searchParams.get("expand") === "true" ||
-      Boolean(request.nextUrl.searchParams.get("highlight")),
+      Boolean(highlight) ||
+      reviewIds.length > 0,
     reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
     reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
-    highlightLabel: request.nextUrl.searchParams.get("highlight"),
+    highlightLabel: highlight,
+    highlightReviewIds: reviewIds,
     skipSummary: true,
   });
 

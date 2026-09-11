@@ -6,6 +6,8 @@ import { env } from "@/lib/env";
 export type AiReviewTheme = {
   label: string;
   count: number;
+  /** 1-based review indexes from the prompt list. */
+  reviewNs?: number[];
 };
 
 export type CursorReviewSummary = {
@@ -83,13 +85,36 @@ function parseSummaryPayload(
 
   const highlights = Array.isArray(parsed.highlights)
     ? parsed.highlights
-        .map((item) => {
+        .map((item): AiReviewTheme | null => {
           if (!item || typeof item !== "object") return null;
-          const row = item as { label?: unknown; count?: unknown };
+          const row = item as {
+            label?: unknown;
+            count?: unknown;
+            reviewNs?: unknown;
+            ns?: unknown;
+          };
           const label = String(row.label ?? "").trim();
           const count = Number(row.count ?? 0);
           if (!label) return null;
-          return { label, count: Number.isFinite(count) ? count : 0 };
+          const rawNs = Array.isArray(row.reviewNs)
+            ? row.reviewNs
+            : Array.isArray(row.ns)
+              ? row.ns
+              : [];
+          const reviewNs = rawNs
+            .map((value) => Number(value))
+            .filter(
+              (value) =>
+                Number.isFinite(value) &&
+                value >= 1 &&
+                value <= reviews.length,
+            );
+          const theme: AiReviewTheme = {
+            label,
+            count: Number.isFinite(count) ? count : reviewNs.length || 0,
+          };
+          if (reviewNs.length > 0) theme.reviewNs = reviewNs;
+          return theme;
         })
         .filter((item): item is AiReviewTheme => Boolean(item))
         .slice(0, 5)
@@ -127,7 +152,9 @@ export async function generateCursorReviewSummary(input: {
       "Do not mention how many reviews there are, approved counts, or the product title in a sentence like “Customers have left 4 approved reviews of the Gift Card”.",
       "Do not start with a review-count opener. Write only what shoppers felt.",
       "Do not use tools. Do not edit files. Reply with JSON only.",
-      "JSON shape: {\"summary\":\"...\",\"highlights\":[{\"label\":\"...\",\"count\":1}]}",
+      'JSON shape: {"summary":"...","highlights":[{"label":"...","count":2,"reviewNs":[1,3]}]}',
+      "For each highlight, reviewNs must list the 1-based n values of reviews that support that theme.",
+      "count must equal reviewNs.length.",
       `Product: ${input.productTitle}`,
       `Approved review count: ${input.reviews.length}`,
       "Reviews (rating, title, body) — keywords only, do not quote these back:",

@@ -153,6 +153,8 @@ export async function buildCustomerSayPayload(input: {
   skipSummary?: boolean;
   /** When set, only return reviews that match this highlight badge. */
   highlightLabel?: string | null;
+  /** Prefer exact review IDs from a highlight badge click. */
+  highlightReviewIds?: string[] | null;
 }) {
   const db = getDb();
   let product = await db.orm.public.Product.where({
@@ -259,13 +261,28 @@ export async function buildCustomerSayPayload(input: {
   }
 
   const highlightLabel = input.highlightLabel?.trim() || null;
-  const matchingSourceIds = highlightLabel
-    ? new Set(
-        sourceReviews
-          .filter((review) => reviewMatchesHighlight(review, highlightLabel))
-          .map((review) => review.id),
-      )
-    : null;
+  const highlightReviewIds = (input.highlightReviewIds ?? [])
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+  const matchingSourceIds = (() => {
+    if (highlightReviewIds.length > 0) {
+      return new Set(highlightReviewIds);
+    }
+    if (!highlightLabel) return null;
+    const fromHighlight = highlights.find(
+      (item) =>
+        item.label.toLowerCase() === highlightLabel.toLowerCase() &&
+        (item.reviewIds?.length ?? 0) > 0,
+    );
+    if (fromHighlight?.reviewIds?.length) {
+      return new Set(fromHighlight.reviewIds);
+    }
+    return new Set(
+      sourceReviews
+        .filter((review) => reviewMatchesHighlight(review, highlightLabel))
+        .map((review) => review.id),
+    );
+  })();
 
   const snippetCandidates = [...sourceReviews]
     .filter((review) => {

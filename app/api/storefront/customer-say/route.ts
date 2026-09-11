@@ -67,14 +67,26 @@ export async function GET(request: NextRequest) {
     params.get("highlight") ??
     params.get("highlight_label") ??
     params.get("theme");
+  const highlightReviewIds = (
+    params.get("review_ids") ??
+    params.get("reviewIds") ??
+    ""
+  )
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
   const data = await buildCustomerSayPayload({
     shopId: shop.id,
     shopifyProductId: productId.replace(/\D/g, "") || productId,
     reviewsOffset: Number.isFinite(reviewsOffset) ? reviewsOffset : 0,
     reviewsLimit: Number.isFinite(reviewsLimit) ? reviewsLimit : 10,
-    includeReviews: includeReviews || Boolean(highlightLabel),
+    includeReviews:
+      includeReviews ||
+      Boolean(highlightLabel) ||
+      highlightReviewIds.length > 0,
     highlightLabel,
+    highlightReviewIds,
   });
 
   return NextResponse.json(
