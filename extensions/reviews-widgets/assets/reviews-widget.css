@@ -423,8 +423,75 @@
   border-radius: 999px;
   background: var(--or-surface);
   padding: 0.45rem 0.85rem;
+  font: inherit;
   font-size: 0.875rem;
   color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.or-customer-say__tag:hover,
+.or-customer-say__tag:focus-visible {
+  border-color: color-mix(in srgb, currentColor 45%, var(--or-border));
+  outline: none;
+}
+
+.or-customer-say__tag.is-active {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 8%, var(--or-surface));
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.or-customer-say__filter-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  border: 1px solid var(--or-border);
+  border-radius: 0.85rem;
+  background: var(--or-surface);
+  padding: 0.75rem 0.95rem;
+}
+
+.or-customer-say__filter-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.or-customer-say__filter-clear {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  color: inherit;
+}
+
+.or-customer-say__review-card.is-highlight-target {
+  animation: or-highlight-pulse 1.6s ease;
+}
+
+@keyframes or-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 28%, transparent);
+  }
+  35% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 .or-customer-say__snippets {
@@ -523,6 +590,7 @@
 .or-customer-say__reviews-error[hidden],
 .or-customer-say__load-more[hidden],
 .or-customer-say__meta[hidden],
+.or-customer-say__filter-banner[hidden],
 .or-customer-say [hidden] {
   display: none !important;
 }

@@ -1,6 +1,7 @@
 export type SummaryHighlight = {
   label: string;
   count: number;
+  reviewIds?: string[];
 };
 
 export type SummarySnippet = {

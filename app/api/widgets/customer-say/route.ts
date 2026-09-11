@@ -49,9 +49,12 @@ export async function GET(request: NextRequest) {
     const data = await buildCustomerSayPayload({
       shopId: auth.shop.id,
       shopifyProductId: fallback.shopifyProductId,
-      includeReviews: request.nextUrl.searchParams.get("expand") === "true",
+      includeReviews:
+        request.nextUrl.searchParams.get("expand") === "true" ||
+        Boolean(request.nextUrl.searchParams.get("highlight")),
       reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
       reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
+      highlightLabel: request.nextUrl.searchParams.get("highlight"),
       skipSummary: true,
     });
 
@@ -61,9 +64,12 @@ export async function GET(request: NextRequest) {
   const data = await buildCustomerSayPayload({
     shopId: auth.shop.id,
     shopifyProductId: productId.replace(/\D/g, "") || productId,
-    includeReviews: request.nextUrl.searchParams.get("expand") === "true",
+    includeReviews:
+      request.nextUrl.searchParams.get("expand") === "true" ||
+      Boolean(request.nextUrl.searchParams.get("highlight")),
     reviewsOffset: Number(request.nextUrl.searchParams.get("offset") ?? 0),
     reviewsLimit: Number(request.nextUrl.searchParams.get("limit") ?? 10),
+    highlightLabel: request.nextUrl.searchParams.get("highlight"),
     skipSummary: true,
   });
 

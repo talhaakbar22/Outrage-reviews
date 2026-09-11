@@ -7,6 +7,7 @@ import {
   isPlaceholderCustomerSummary,
   normalizeCustomerSayPayload,
 } from "@/lib/customer-say";
+import { reviewMatchesHighlight } from "@/lib/customer-say-highlights";
 
 export type CustomerSayData = import("@/lib/customer-say").CustomerSayViewModel;
 
@@ -91,6 +92,7 @@ export function CustomerSayWidgetPreview({
   hideSummary?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -108,35 +110,55 @@ export function CustomerSayWidgetPreview({
     );
   }
 
+  const payload = data;
+
   const monthLabel =
-    data.summaryMonthLabel ??
-    (data.summaryGeneratedAt
-      ? formatMonthLabel(data.summaryGeneratedAt)
+    payload.summaryMonthLabel ??
+    (payload.summaryGeneratedAt
+      ? formatMonthLabel(payload.summaryGeneratedAt)
       : "");
   const reviewCount = Math.max(
-    Number(data.count ?? 0),
-    Number(data.reviewsTotal ?? 0),
-    data.reviews?.length ?? 0,
+    Number(payload.count ?? 0),
+    Number(payload.reviewsTotal ?? 0),
+    payload.reviews?.length ?? 0,
   );
   const summarySourceCount = Math.max(
-    Number(data.summarySourceCount ?? 0),
+    Number(payload.summarySourceCount ?? 0),
     reviewCount,
   );
   const summaryText =
-    isPlaceholderCustomerSummary(data.summaryText) && reviewCount > 0
+    isPlaceholderCustomerSummary(payload.summaryText) && reviewCount > 0
       ? buildFallbackCustomerSummary({
-          productTitle: data.productTitle,
+          productTitle: payload.productTitle,
           reviewCount,
-          quotes: (data.reviews ?? []).map(
+          quotes: (payload.reviews ?? []).map(
             (review) => review.body || review.title,
           ),
-          ratings: (data.reviews ?? []).map((review) => Number(review.rating ?? 0)),
+          ratings: (payload.reviews ?? []).map((review) => Number(review.rating ?? 0)),
         })
-      : data.summaryText;
-  const highlights = data.highlights ?? [];
-  const snippets = (data.snippets ?? []).slice(0, 4);
-  const reviews = data.reviews ?? [];
+      : payload.summaryText;
+  const highlights = payload.highlights ?? [];
+  const snippets = (payload.snippets ?? []).slice(0, 4);
+  const reviews = (payload.reviews ?? []).filter((review) =>
+    activeHighlight
+      ? reviewMatchesHighlight(
+          {
+            id: review.id,
+            rating: Number(review.rating ?? 0),
+            title: review.title,
+            body: review.body,
+          },
+          activeHighlight,
+        )
+      : true,
+  );
   const showExpanded = expanded;
+
+  function openHighlight(label: string) {
+    setActiveHighlight(label);
+    setExpanded(true);
+    if ((payload.reviews?.length ?? 0) === 0 && onReadMore) onReadMore();
+  }
 
   return (
     <div
@@ -196,17 +218,28 @@ export function CustomerSayWidgetPreview({
 
         {!hideSummary && highlights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {highlights.map((item) => (
-              <span
-                key={item.label}
-                className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              >
-                <span>{item.label}</span>
-                <span className="font-semibold text-zinc-950 dark:text-zinc-50">
-                  {item.count}
-                </span>
-              </span>
-            ))}
+            {highlights.map((item) => {
+              const active =
+                activeHighlight?.toLowerCase() === item.label.toLowerCase();
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => openHighlight(item.label)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
+                    active
+                      ? "border-zinc-900 bg-zinc-100 text-zinc-950 dark:border-zinc-100 dark:bg-zinc-800 dark:text-zinc-50"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-500"
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  <span className="font-semibold text-zinc-950 dark:text-zinc-50">
+                    {item.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : null}
 
@@ -253,15 +286,38 @@ export function CustomerSayWidgetPreview({
           <div className="space-y-3">
             <button
               type="button"
-              onClick={() => setExpanded(false)}
+              onClick={() => {
+                setExpanded(false);
+                setActiveHighlight(null);
+              }}
               className="justify-self-start text-sm font-medium text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
             >
               Hide reviews
             </button>
 
+            {activeHighlight ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+                <p className="font-medium text-zinc-800 dark:text-zinc-200">
+                  Showing reviews for “{activeHighlight}”
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveHighlight(null)}
+                  className="font-semibold text-zinc-800 underline underline-offset-4 dark:text-zinc-200"
+                >
+                  Show all reviews
+                </button>
+              </div>
+            ) : null}
+
             <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
               {reviews.length === 0 && loadingMore ? (
                 <p className="text-sm text-zinc-500">Loading reviews…</p>
+              ) : null}
+              {reviews.length === 0 && !loadingMore ? (
+                <p className="text-sm text-zinc-500">
+                  No reviews matched this theme yet.
+                </p>
               ) : null}
               {reviews.map((review) => {
                 const media = review.media ?? [];

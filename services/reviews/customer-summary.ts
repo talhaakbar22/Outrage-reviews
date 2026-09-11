@@ -3,6 +3,12 @@ import {
   isPlaceholderCustomerSummary,
   normalizeCustomerSayPayload as normalizeCustomerSayViewModel,
 } from "@/lib/customer-say";
+import {
+  buildHeuristicHighlights,
+  enrichHighlightsWithReviewIds,
+  reviewMatchesHighlight,
+  type SummaryHighlight,
+} from "@/lib/customer-say-highlights";
 import { ensureProductSynced } from "@/services/products/ensure-synced";
 import {
   APPROVED_REVIEW_STATUSES,
@@ -12,10 +18,7 @@ import {
   loadCachedAiSummary,
 } from "@/services/reviews/ai-summary";
 
-export type SummaryHighlight = {
-  label: string;
-  count: number;
-};
+export type { SummaryHighlight };
 
 export type SummarySnippet = {
   id: string;
@@ -72,33 +75,6 @@ export type CustomerSayPayload = {
 const SUMMARY_SOURCE_LIMIT = 200;
 const SNIPPET_LIMIT = 4;
 const SNIPPET_MIN_RATING = 4;
-
-const THEME_PATTERNS: Array<{ label: string; patterns: RegExp[] }> = [
-  {
-    label: "Great quality for the price",
-    patterns: [/quality/i, /well.?made/i, /craftsmanship/i, /premium/i, /excellent/i],
-  },
-  {
-    label: "Great gift reaction",
-    patterns: [/gift/i, /present/i, /birthday/i, /christmas/i, /anniversary/i],
-  },
-  {
-    label: "Solid, weighty feel",
-    patterns: [/weight/i, /weighty/i, /heavy/i, /solid/i, /substantial/i, /sturdy/i],
-  },
-  {
-    label: "Comfortable daily wear",
-    patterns: [/comfort/i, /daily/i, /wear/i, /fit/i, /soft/i],
-  },
-  {
-    label: "Fast delivery",
-    patterns: [/delivery/i, /shipping/i, /arrived/i, /fast/i, /quick/i],
-  },
-  {
-    label: "Looks even better in person",
-    patterns: [/looks/i, /beautiful/i, /stunning/i, /gorgeous/i, /picture/i],
-  },
-];
 
 function truncateQuote(text: string, max = 110) {
   const cleaned = text.replace(/\s+/g, " ").trim();
@@ -163,24 +139,6 @@ function firstSentence(text: string) {
   return truncateQuote(cleaned, 100);
 }
 
-function countThemeMatches(body: string, patterns: RegExp[]) {
-  return patterns.some((pattern) => pattern.test(body)) ? 1 : 0;
-}
-
-function buildHighlights(reviewBodies: string[]) {
-  const counts = THEME_PATTERNS.map((theme) => ({
-    label: theme.label,
-    count: reviewBodies.reduce(
-      (total, body) => total + countThemeMatches(body, theme.patterns),
-      0,
-    ),
-  }))
-    .filter((item) => item.count > 0)
-    .sort((a, b) => b.count - a.count);
-
-  return counts.slice(0, 5);
-}
-
 function formatSummaryMonth(date: Date) {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
@@ -193,6 +151,8 @@ export async function buildCustomerSayPayload(input: {
   includeReviews?: boolean;
   waitForSummary?: boolean;
   skipSummary?: boolean;
+  /** When set, only return reviews that match this highlight badge. */
+  highlightLabel?: string | null;
 }) {
   const db = getDb();
   let product = await db.orm.public.Product.where({
@@ -239,11 +199,7 @@ export async function buildCustomerSayPayload(input: {
     (review) => review.isVerifiedPurchase,
   ).length;
 
-  const bodies = sourceReviews
-    .map((review) => review.body?.trim())
-    .filter((body): body is string => Boolean(body));
-
-  const heuristicHighlights = buildHighlights(bodies);
+  const heuristicHighlights = buildHeuristicHighlights(sourceReviews);
   const fingerprint = fingerprintPublishedReviews(sourceReviews);
   const cached = await loadCachedAiSummary({
     shopId: input.shopId,
@@ -259,8 +215,9 @@ export async function buildCustomerSayPayload(input: {
     cached?.summaryText && !isPlaceholderCustomerSummary(cached.summaryText)
       ? cached.summaryText
       : immediateSummary;
-  let highlights =
-    cached?.highlights?.length ? cached.highlights : heuristicHighlights;
+  let highlights: SummaryHighlight[] = cached?.highlights?.length
+    ? enrichHighlightsWithReviewIds(cached.highlights, sourceReviews)
+    : heuristicHighlights;
   let generatedAtIso =
     cached?.generatedAt || toIsoString(nowInstant()) || new Date().toISOString();
   const summarySourceCount = sourceReviews.length;
@@ -283,7 +240,10 @@ export async function buildCustomerSayPayload(input: {
           summaryText = generated.summaryText;
           highlights =
             generated.highlights.length > 0
-              ? generated.highlights
+              ? enrichHighlightsWithReviewIds(
+                  generated.highlights,
+                  sourceReviews,
+                )
               : heuristicHighlights;
           generatedAtIso = generated.generatedAt;
           summaryIsReady = true;
@@ -297,6 +257,15 @@ export async function buildCustomerSayPayload(input: {
       });
     }
   }
+
+  const highlightLabel = input.highlightLabel?.trim() || null;
+  const matchingSourceIds = highlightLabel
+    ? new Set(
+        sourceReviews
+          .filter((review) => reviewMatchesHighlight(review, highlightLabel))
+          .map((review) => review.id),
+      )
+    : null;
 
   const snippetCandidates = [...sourceReviews]
     .filter((review) => {
@@ -327,6 +296,13 @@ export async function buildCustomerSayPayload(input: {
   const reviewsLimit = Math.min(input.reviewsLimit ?? 10, 50);
 
   if (input.includeReviews) {
+    // When filtering by a highlight, load a larger window then filter in memory
+    // so badge clicks always surface the matching comments (not just page 1).
+    const fetchLimit = matchingSourceIds
+      ? Math.min(SUMMARY_SOURCE_LIMIT, 200)
+      : reviewsLimit;
+    const fetchOffset = matchingSourceIds ? 0 : reviewsOffset;
+
     const rows = await db.orm.public.Review.where({
       shopId: input.shopId,
       productId: product.id,
@@ -343,11 +319,11 @@ export async function buildCustomerSayPayload(input: {
           .orderBy((item) => item.publishedAt.desc()),
       )
       .orderBy((review) => review.publishedAt.desc())
-      .offset(reviewsOffset)
-      .limit(reviewsLimit)
+      .offset(fetchOffset)
+      .limit(fetchLimit)
       .all();
 
-    reviews = rows.map((review) => {
+    const mapped = rows.map((review) => {
       const replies = mapStoreReplies(review.replies ?? []);
       const storeReply = resolveMerchantReply(
         review.merchantReply ?? null,
@@ -379,7 +355,16 @@ export async function buildCustomerSayPayload(input: {
       };
     });
 
-    reviewsTotal = publishedCount;
+    if (matchingSourceIds) {
+      const filtered = mapped.filter((review) =>
+        matchingSourceIds.has(review.id),
+      );
+      reviewsTotal = filtered.length;
+      reviews = filtered.slice(reviewsOffset, reviewsOffset + reviewsLimit);
+    } else {
+      reviews = mapped;
+      reviewsTotal = publishedCount;
+    }
   }
 
   const displayCount = Math.max(Number(product.reviewCount), publishedCount);

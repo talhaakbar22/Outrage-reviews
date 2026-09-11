@@ -63,13 +63,18 @@ export async function GET(request: NextRequest) {
     params.get("include_reviews") === "true" ||
     params.get("expand") === "true" ||
     reviewsOffset > 0;
+  const highlightLabel =
+    params.get("highlight") ??
+    params.get("highlight_label") ??
+    params.get("theme");
 
   const data = await buildCustomerSayPayload({
     shopId: shop.id,
     shopifyProductId: productId.replace(/\D/g, "") || productId,
     reviewsOffset: Number.isFinite(reviewsOffset) ? reviewsOffset : 0,
     reviewsLimit: Number.isFinite(reviewsLimit) ? reviewsLimit : 10,
-    includeReviews,
+    includeReviews: includeReviews || Boolean(highlightLabel),
+    highlightLabel,
   });
 
   return NextResponse.json(

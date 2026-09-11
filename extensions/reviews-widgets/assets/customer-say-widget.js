@@ -71,7 +71,7 @@
     return url.toString();
   }
 
-  function renderHighlights(container, highlights) {
+  function renderHighlights(container, highlights, activeLabel) {
     if (!highlights || !highlights.length) {
       container.hidden = true;
       container.innerHTML = "";
@@ -81,12 +81,27 @@
     container.hidden = false;
     container.innerHTML = highlights
       .map(function (item) {
+        var label = String(item.label || "");
+        var active =
+          activeLabel &&
+          label.toLowerCase() === String(activeLabel).toLowerCase();
+        var reviewIds = Array.isArray(item.reviewIds)
+          ? item.reviewIds.join(",")
+          : "";
         return (
-          '<span class="or-customer-say__tag">' +
-          escapeHtml(item.label) +
+          '<button type="button" class="or-customer-say__tag' +
+          (active ? " is-active" : "") +
+          '" data-outrage-highlight-tag data-highlight-label="' +
+          escapeHtml(label) +
+          '" data-review-ids="' +
+          escapeHtml(reviewIds) +
+          '" aria-pressed="' +
+          (active ? "true" : "false") +
+          '">' +
+          escapeHtml(label) +
           " <strong>" +
           escapeHtml(item.count) +
-          "</strong></span>"
+          "</strong></button>"
         );
       })
       .join("");
@@ -317,6 +332,10 @@
         return (
           '<article class="or-customer-say__review-card' +
           (hasMedia ? " has-media" : "") +
+          '" id="or-review-' +
+          escapeHtml(review.id) +
+          '" data-review-id="' +
+          escapeHtml(review.id) +
           '">' +
           '<div class="or-customer-say__review-main">' +
           '<div class="or-customer-say__review-header">' +
@@ -493,7 +512,7 @@
     return summary;
   }
 
-  function applySummary(root, data, starColor) {
+  function applySummary(root, data, starColor, activeHighlight) {
     var average = root.querySelector("[data-outrage-average]");
     var scoreStars = root.querySelector("[data-outrage-score-stars]");
     var verified = root.querySelector("[data-outrage-verified-count]");
@@ -546,13 +565,19 @@
         (month ? " • " + month : "");
       summaryMeta.hidden = false;
     }
-    if (highlights) renderHighlights(highlights, data.highlights || []);
+    if (highlights) {
+      renderHighlights(highlights, data.highlights || [], activeHighlight);
+    }
     if (snippets) renderSnippets(snippets, data.snippets || [], starColor);
   }
 
   async function hydrate(root) {
     var reviewsList = root.querySelector("[data-outrage-reviews-list]");
     var loadMore = root.querySelector("[data-outrage-load-more]");
+    var highlightsEl = root.querySelector("[data-outrage-highlights]");
+    var filterBanner = root.querySelector("[data-outrage-highlight-filter]");
+    var filterLabel = root.querySelector("[data-outrage-highlight-filter-label]");
+    var clearHighlight = root.querySelector("[data-outrage-clear-highlight]");
     var pageSize = Number(root.getAttribute("data-reviews-page-size") || 10);
     var starColor = "#18181B";
     var state = {
@@ -562,11 +587,14 @@
       failed: false,
       expanded: false,
       reviewCount: 0,
+      totalReviewCount: 0,
       loadedOnce: false,
+      highlightLabel: null,
+      highlights: [],
     };
 
     function syncToggleUi() {
-      setListingExpanded(root, state.expanded, state.reviewCount);
+      setListingExpanded(root, state.expanded, state.totalReviewCount || state.reviewCount);
       if (loadMore) {
         if (state.failed && state.expanded) {
           loadMore.hidden = false;
@@ -577,6 +605,42 @@
           loadMore.disabled = false;
           if (!state.failed) loadMore.textContent = "Load more reviews";
         }
+      }
+    }
+
+    function syncFilterBanner() {
+      if (!filterBanner) return;
+      if (state.highlightLabel) {
+        filterBanner.hidden = false;
+        if (filterLabel) {
+          filterLabel.textContent =
+            'Showing reviews for “‘ + state.highlightLabel + '”';
+        }
+      } else {
+        filterBanner.hidden = true;
+        if (filterLabel) filterLabel.textContent = "";
+      }
+      if (highlightsEl) {
+        renderHighlights(highlightsEl, state.highlights, state.highlightLabel);
+      }
+    }
+
+    function scrollToReviews() {
+      var listing = root.querySelector("[data-outrage-listing]");
+      if (!listing) return;
+      try {
+        listing.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (error) {
+        listing.scrollIntoView();
+      }
+      var first = reviewsList
+        ? reviewsList.querySelector(".or-customer-say__review-card")
+        : null;
+      if (first) {
+        first.classList.add("is-highlight-target");
+        window.setTimeout(function () {
+          first.classList.remove("is-highlight-target");
+        }, 1800);
       }
     }
 
@@ -592,21 +656,35 @@
       }
 
       try {
-        var data = await fetchPayload(root, {
+        var params = {
           include_reviews: "true",
           reviews_offset: String(state.offset),
           reviews_limit: String(pageSize),
-        });
+        };
+        if (state.highlightLabel) {
+          params.highlight = state.highlightLabel;
+        }
 
+        var data = await fetchPayload(root, params);
         var batch = data.reviews || [];
 
         if (!append) {
-          applySummary(root, data, starColor);
-          state.reviewCount = Math.max(
+          applySummary(root, data, starColor, state.highlightLabel);
+          state.highlights = Array.isArray(data.highlights)
+            ? data.highlights
+            : state.highlights;
+          state.totalReviewCount = Math.max(
             Number(data.count || 0),
-            Number(data.reviewsTotal || 0),
-            batch.length,
+            Number(data.summarySourceCount || 0),
+            state.totalReviewCount,
           );
+          state.reviewCount = state.highlightLabel
+            ? Number(data.reviewsTotal || batch.length)
+            : Math.max(
+                Number(data.count || 0),
+                Number(data.reviewsTotal || 0),
+                batch.length,
+              );
         }
 
         if (reviewsList) {
@@ -621,7 +699,9 @@
         state.offset += batch.length;
         state.hasMore = Boolean(data.hasMoreReviews);
         state.loadedOnce = true;
-        state.reviewCount = Math.max(state.reviewCount, state.offset);
+        if (!state.highlightLabel) {
+          state.reviewCount = Math.max(state.reviewCount, state.offset);
+        }
 
         if (loadMore) {
           loadMore.hidden = !(state.expanded && state.hasMore);
@@ -629,10 +709,11 @@
           loadMore.textContent = "Load more reviews";
         }
 
+        syncFilterBanner();
         syncToggleUi();
 
         root._outrageCustomerSay = {
-          count: state.reviewCount,
+          count: state.totalReviewCount || state.reviewCount,
           pageSize: pageSize,
           state: state,
         };
@@ -658,10 +739,15 @@
     }
 
     function openReviews() {
-      if (state.reviewCount <= 0 && !state.failed) return;
+      if (state.totalReviewCount <= 0 && state.reviewCount <= 0 && !state.failed) {
+        return;
+      }
+      const wasFiltered = Boolean(state.highlightLabel);
+      state.highlightLabel = null;
       state.expanded = true;
+      syncFilterBanner();
       syncToggleUi();
-      if (!state.loadedOnce || state.failed) {
+      if (!state.loadedOnce || state.failed || wasFiltered) {
         state.offset = 0;
         loadReviews(false);
       }
@@ -669,7 +755,41 @@
 
     function closeReviews() {
       state.expanded = false;
+      state.highlightLabel = null;
+      syncFilterBanner();
       syncToggleUi();
+    }
+
+    async function openHighlight(label) {
+      var next = String(label || "").trim();
+      if (!next) return;
+
+      if (state.highlightLabel === next && state.expanded) {
+        scrollToReviews();
+        return;
+      }
+
+      state.highlightLabel = next;
+      state.expanded = true;
+      state.offset = 0;
+      state.loadedOnce = false;
+      syncFilterBanner();
+      syncToggleUi();
+      await loadReviews(false);
+      scrollToReviews();
+    }
+
+    async function clearHighlightFilter() {
+      if (!state.highlightLabel) return;
+      state.highlightLabel = null;
+      state.offset = 0;
+      state.loadedOnce = false;
+      syncFilterBanner();
+      if (state.expanded) {
+        await loadReviews(false);
+      } else {
+        syncToggleUi();
+      }
     }
 
     function retryOrLoadMore() {
@@ -688,10 +808,29 @@
     if (readAll) readAll.addEventListener("click", openReviews);
     if (hideBtn) hideBtn.addEventListener("click", closeReviews);
     if (loadMore) loadMore.addEventListener("click", retryOrLoadMore);
+    if (clearHighlight) {
+      clearHighlight.addEventListener("click", function () {
+        clearHighlightFilter();
+      });
+    }
+    if (highlightsEl) {
+      highlightsEl.addEventListener("click", function (event) {
+        var target = event.target;
+        var button =
+          target && target.closest
+            ? target.closest("[data-outrage-highlight-tag]")
+            : null;
+        if (!button || !highlightsEl.contains(button)) return;
+        var label = button.getAttribute("data-highlight-label") || "";
+        openHighlight(label);
+      });
+    }
 
-    // Keep reviews collapsed until the shopper presses Read all.
+    // Keep reviews collapsed until the shopper presses Read all / a badge.
     await loadReviews(false);
     state.expanded = false;
+    state.highlightLabel = null;
+    syncFilterBanner();
     syncToggleUi();
   }
 
