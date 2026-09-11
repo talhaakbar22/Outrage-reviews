@@ -6,6 +6,7 @@ import {
   enqueuePhotoReminder,
   DEFAULT_PHOTO_REMINDER_DELAY_DAYS,
 } from "@/lib/queue";
+import { resolveEmailTemplate } from "@/services/email/editable-templates";
 import {
   sendMerchantReplyEmailMessage,
   sendReviewEmail,
@@ -103,14 +104,17 @@ export async function sendReviewRequestEmail(input: {
     return { sent: false as const, reason: "already_sent" };
   }
 
-  await sendReviewEmail({
-    to: context.request.email,
-    shopName: context.shop.name ?? context.shop.shopifyDomain,
-    productTitle: context.product.title,
-    customerName: context.customerName,
-    reviewUrl: context.reviewUrl,
-    kind: "request" satisfies ReviewEmailKind,
-  });
+  await sendReviewEmail(
+    {
+      to: context.request.email,
+      shopName: context.shop.name ?? context.shop.shopifyDomain,
+      productTitle: context.product.title,
+      customerName: context.customerName,
+      reviewUrl: context.reviewUrl,
+      kind: "request" satisfies ReviewEmailKind,
+    },
+    resolveEmailTemplate("request", context.settings.branding),
+  );
 
   const now = nowInstant();
   await getDb().orm.public.ReviewRequest.where({ id: context.request.id }).update({
@@ -155,14 +159,17 @@ export async function sendReviewReminderEmail(input: {
     return { sent: false as const, reason: "completed" };
   }
 
-  await sendReviewEmail({
-    to: context.request.email,
-    shopName: context.shop.name ?? context.shop.shopifyDomain,
-    productTitle: context.product.title,
-    customerName: context.customerName,
-    reviewUrl: context.reviewUrl,
-    kind: "reminder",
-  });
+  await sendReviewEmail(
+    {
+      to: context.request.email,
+      shopName: context.shop.name ?? context.shop.shopifyDomain,
+      productTitle: context.product.title,
+      customerName: context.customerName,
+      reviewUrl: context.reviewUrl,
+      kind: "reminder",
+    },
+    resolveEmailTemplate("reminder", context.settings.branding),
+  );
 
   await getDb().orm.public.ReviewRequest.where({ id: context.request.id }).update({
     remindedAt: nowInstant(),
@@ -265,16 +272,19 @@ export async function sendMerchantReplyEmail(input: {
     return { sent: false as const, reason: "missing_store_reply" };
   }
 
-  await sendMerchantReplyEmailMessage({
-    to,
-    shopName,
-    shopDomain: shop.shopifyDomain,
-    productTitle,
-    productUrl,
-    productImageUrl: product?.imageUrl ?? null,
-    customerName: review.reviewerName,
-    conversation,
-  });
+  await sendMerchantReplyEmailMessage(
+    {
+      to,
+      shopName,
+      shopDomain: shop.shopifyDomain,
+      productTitle,
+      productUrl,
+      productImageUrl: product?.imageUrl ?? null,
+      customerName: review.reviewerName,
+      conversation,
+    },
+    resolveEmailTemplate("merchant_reply", settings.branding),
+  );
 
   return { sent: true as const };
 }
@@ -324,17 +334,20 @@ export async function sendThankYouEmail(input: {
     );
   }
 
-  await sendReviewEmail({
-    to,
-    shopName: shop.name ?? shop.shopifyDomain,
-    productTitle: product?.title ?? "your purchase",
-    customerName: review.reviewerName,
-    // Thank-you CTAs must use the public storefront product URL only.
-    reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
-    productUrl,
-    productImageUrl: product?.imageUrl ?? null,
-    kind: "thank_you" satisfies ReviewEmailKind,
-  });
+  await sendReviewEmail(
+    {
+      to,
+      shopName: shop.name ?? shop.shopifyDomain,
+      productTitle: product?.title ?? "your purchase",
+      customerName: review.reviewerName,
+      // Thank-you CTAs must use the public storefront product URL only.
+      reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
+      productUrl,
+      productImageUrl: product?.imageUrl ?? null,
+      kind: "thank_you" satisfies ReviewEmailKind,
+    },
+    resolveEmailTemplate("thank_you", settings.branding),
+  );
 
   return { sent: true as const };
 }
@@ -385,15 +398,18 @@ export async function sendPhotoReminderEmail(input: {
       })
     : null;
 
-  await sendReviewEmail({
-    to,
-    shopName: shop.name ?? shop.shopifyDomain,
-    productTitle: product?.title ?? "your purchase",
-    customerName: review.reviewerName,
-    reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
-    productUrl,
-    kind: "photo_reminder" satisfies ReviewEmailKind,
-  });
+  await sendReviewEmail(
+    {
+      to,
+      shopName: shop.name ?? shop.shopifyDomain,
+      productTitle: product?.title ?? "your purchase",
+      customerName: review.reviewerName,
+      reviewUrl: productUrl ?? `https://${shop.shopifyDomain}`,
+      productUrl,
+      kind: "photo_reminder" satisfies ReviewEmailKind,
+    },
+    resolveEmailTemplate("photo_reminder", settings.branding),
+  );
 
   return { sent: true as const };
 }

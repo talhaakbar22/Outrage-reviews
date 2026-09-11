@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "@/lib/env";
+import type { EditableEmailTemplate } from "@/services/email/editable-templates";
 import {
   buildMerchantReplyEmail,
   buildReviewEmail,
@@ -117,17 +118,21 @@ async function deliverEmail(input: {
   return deliverViaResend(input);
 }
 
-function contentForReviewEmail(payload: ReviewEmailPayload) {
+function contentForReviewEmail(
+  payload: ReviewEmailPayload,
+  template?: EditableEmailTemplate | null,
+) {
   if (payload.kind === "thank_you") {
-    return buildThankYouEmail(payload);
+    return buildThankYouEmail(payload, template);
   }
-  return buildReviewEmail(payload);
+  return buildReviewEmail(payload, template);
 }
 
 export async function sendReviewEmail(
   payload: ReviewEmailPayload,
+  template?: EditableEmailTemplate | null,
 ): Promise<SendEmailResult> {
-  const content = contentForReviewEmail(payload);
+  const content = contentForReviewEmail(payload, template);
   return deliverEmail({
     to: payload.to,
     subject: content.subject,
@@ -139,8 +144,9 @@ export async function sendReviewEmail(
 
 export async function sendMerchantReplyEmailMessage(
   payload: MerchantReplyEmailPayload,
+  template?: EditableEmailTemplate | null,
 ): Promise<SendEmailResult> {
-  const content = buildMerchantReplyEmail(payload);
+  const content = buildMerchantReplyEmail(payload, template);
   return deliverEmail({
     to: payload.to,
     subject: content.subject,

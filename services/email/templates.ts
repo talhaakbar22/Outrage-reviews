@@ -1,3 +1,10 @@
+import {
+  buildTemplateVarsFromReplyPayload,
+  buildTemplateVarsFromReviewPayload,
+  getDefaultEmailTemplate,
+  interpolateTemplate,
+  type EditableEmailTemplate,
+} from "@/services/email/editable-templates";
 import type {
   MerchantReplyEmailPayload,
   ReviewEmailPayload,
@@ -20,28 +27,27 @@ function nl2br(value: string) {
   return escapeHtml(value).replaceAll("\n", "<br />");
 }
 
-export function buildReviewEmail(payload: ReviewEmailPayload) {
-  const greeting = payload.customerName
-    ? `Hi ${payload.customerName},`
-    : "Hi there,";
+function greetingFor(customerName: string | null | undefined) {
+  const firstName = customerName?.split(/\s+/)[0]?.trim() || null;
+  return firstName ? `Hi ${firstName},` : "Hi there,";
+}
+
+export function buildReviewEmail(
+  payload: ReviewEmailPayload,
+  templateOverride?: EditableEmailTemplate | null,
+) {
+  const template =
+    templateOverride ??
+    getDefaultEmailTemplate(
+      payload.kind === "thank_you" ? "request" : payload.kind,
+    );
+  const vars = buildTemplateVarsFromReviewPayload(payload);
+  const greeting = greetingFor(payload.customerName);
   const shopName = payload.shopName;
-  const productTitle = payload.productTitle;
-  const isReminder = payload.kind === "reminder";
   const isPhotoReminder = payload.kind === "photo_reminder";
-
-  const subject = isPhotoReminder
-    ? `Add a photo to your ${productTitle} review?`
-    : isReminder
-      ? `Reminder: how was your ${productTitle}?`
-      : `How was your ${productTitle}?`;
-
-  const intro = isPhotoReminder
-    ? `Thanks again for reviewing ${productTitle}. Photos and videos make reviews even more helpful — if you have a moment, we’d love to see yours.`
-    : isReminder
-      ? `Just a quick reminder from ${shopName} — we'd still love your thoughts on ${productTitle}.`
-      : `Thanks for shopping with ${shopName}. How was your ${productTitle}?`;
-
-  const ctaLabel = isPhotoReminder ? "Add a photo or video" : "Write a review";
+  const subject = interpolateTemplate(template.subject, vars);
+  const intro = interpolateTemplate(template.body, vars);
+  const ctaLabel = interpolateTemplate(template.ctaLabel, vars) || "Continue";
   const ctaUrl = payload.productUrl || payload.reviewUrl;
 
   const text = [
@@ -62,7 +68,7 @@ export function buildReviewEmail(payload: ReviewEmailPayload) {
   <body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; line-height: 1.5; color: #18181b; background: #fafafa; padding: 24px;">
     <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e4e4e7; border-radius: 16px; padding: 28px;">
       <p style="margin: 0 0 16px;">${escapeHtml(greeting)}</p>
-      <p style="margin: 0 0 24px;">${escapeHtml(intro)}</p>
+      <p style="margin: 0 0 24px; white-space: pre-wrap;">${nl2br(intro)}</p>
       <p style="margin: 0 0 28px;">
         <a href="${escapeHtml(ctaUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
           ${escapeHtml(ctaLabel)}
@@ -79,25 +85,31 @@ export function buildReviewEmail(payload: ReviewEmailPayload) {
   return { subject, text, html };
 }
 
-export function buildThankYouEmail(payload: ReviewEmailPayload) {
-  const firstName = payload.customerName?.split(/\s+/)[0]?.trim() || null;
-  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+export function buildThankYouEmail(
+  payload: ReviewEmailPayload,
+  templateOverride?: EditableEmailTemplate | null,
+) {
+  const template = templateOverride ?? getDefaultEmailTemplate("thank_you");
+  const vars = buildTemplateVarsFromReviewPayload(payload);
+  const greeting = greetingFor(payload.customerName);
   const shopName = payload.shopName;
   const productTitle = payload.productTitle;
-  // Public storefront product URL only (never dashboard/admin).
   const productUrl = payload.productUrl || null;
   const productImageUrl = payload.productImageUrl?.trim() || null;
 
-  const subject = `Thank you for your review of ${productTitle}`;
+  const subject = interpolateTemplate(template.subject, vars);
+  const headline =
+    interpolateTemplate(template.headline, vars) || "Thank you for your review";
+  const body = interpolateTemplate(template.body, vars);
+  const ctaLabel =
+    interpolateTemplate(template.ctaLabel, vars) || "View product page";
 
   const text = [
     greeting,
     "",
-    `Thank you for taking the time to review ${productTitle}.`,
+    body,
     "",
-    `Your feedback helps other shoppers and means a lot to everyone at ${shopName}.`,
-    "",
-    productUrl ? `View the product: ${productUrl}` : "",
+    productUrl ? `${ctaLabel}: ${productUrl}` : "",
     "",
     "We hope to see you again soon.",
     "",
@@ -145,7 +157,7 @@ export function buildThankYouEmail(payload: ReviewEmailPayload) {
   const ctaHtml = productUrl
     ? `<p style="margin: 28px 0 0; text-align: center;">
          <a href="${escapeHtml(productUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 999px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600;">
-           View product page
+           ${escapeHtml(ctaLabel)}
          </a>
        </p>`
     : "";
@@ -168,7 +180,7 @@ export function buildThankYouEmail(payload: ReviewEmailPayload) {
                   ${escapeHtml(shopName)}
                 </p>
                 <h1 style="margin: 12px 0 0; font-size: 30px; line-height: 1.15; font-weight: 400; color: #ffffff; letter-spacing: -0.03em;">
-                  Thank you for your review
+                  ${escapeHtml(headline)}
                 </h1>
               </td>
             </tr>
@@ -177,8 +189,8 @@ export function buildThankYouEmail(payload: ReviewEmailPayload) {
                 <p style="margin: 0 0 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.6; color: #3f3f46;">
                   ${escapeHtml(greeting)}
                 </p>
-                <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: #3f3f46;">
-                  Thank you for taking the time to review <strong style="color: #18181b;">${escapeHtml(productTitle)}</strong>. Your feedback helps other shoppers choose with confidence and means a lot to our team.
+                <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: #3f3f46; white-space: pre-wrap;">
+                  ${nl2br(body)}
                 </p>
                 ${productCardHtml}
                 ${ctaHtml}
@@ -209,20 +221,31 @@ export function buildThankYouEmail(payload: ReviewEmailPayload) {
   return { subject, text, html };
 }
 
-export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
-  const firstName = payload.customerName?.split(" ")[0]?.trim() || null;
-  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+export function buildMerchantReplyEmail(
+  payload: MerchantReplyEmailPayload,
+  templateOverride?: EditableEmailTemplate | null,
+) {
+  const template =
+    templateOverride ?? getDefaultEmailTemplate("merchant_reply");
+  const vars = buildTemplateVarsFromReplyPayload(payload);
+  const greeting = greetingFor(payload.customerName);
   const shopName = payload.shopName;
   const productTitle = payload.productTitle;
   const productUrl = payload.productUrl;
   const productImageUrl = payload.productImageUrl?.trim() || null;
 
-  const subject = `${shopName} replied to your review of ${productTitle}`;
+  const subject = interpolateTemplate(template.subject, vars);
+  const headline =
+    interpolateTemplate(template.headline, vars) ||
+    "They replied to your review";
+  const intro = interpolateTemplate(template.body, vars);
+  const ctaLabel =
+    interpolateTemplate(template.ctaLabel, vars) || "View product page";
 
   const textLines = [
     greeting,
     "",
-    `${shopName} just replied to your review of ${productTitle}.`,
+    intro,
     "",
     "Here’s the full conversation:",
     "",
@@ -244,7 +267,7 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
   }
 
   if (productUrl) {
-    textLines.push(`View the product: ${productUrl}`);
+    textLines.push(`${ctaLabel}: ${productUrl}`);
     textLines.push("");
   }
 
@@ -327,7 +350,7 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
   const ctaHtml = productUrl
     ? `<p style="margin: 8px 0 24px; text-align: center;">
          <a href="${escapeHtml(productUrl)}" style="display: inline-block; background: #18181b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 999px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600;">
-           View product page
+           ${escapeHtml(ctaLabel)}
          </a>
        </p>`
     : "";
@@ -350,7 +373,7 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
                   ${escapeHtml(shopName)}
                 </p>
                 <h1 style="margin: 12px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; line-height: 1.2; font-weight: 400; color: #ffffff; letter-spacing: -0.02em;">
-                  They replied to your review
+                  ${escapeHtml(headline)}
                 </h1>
               </td>
             </tr>
@@ -359,8 +382,8 @@ export function buildMerchantReplyEmail(payload: MerchantReplyEmailPayload) {
                 <p style="margin: 0 0 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.6; color: #3f3f46;">
                   ${escapeHtml(greeting)}
                 </p>
-                <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: #3f3f46;">
-                  ${escapeHtml(shopName)} just responded about <strong style="color: #18181b;">${escapeHtml(productTitle)}</strong>. Here’s the full conversation.
+                <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: #3f3f46; white-space: pre-wrap;">
+                  ${nl2br(intro)}
                 </p>
                 ${productCardHtml}
                 ${conversationHtml}

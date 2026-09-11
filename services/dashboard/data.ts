@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/prisma";
+import type { ShopBranding } from "@/services/email/editable-templates";
 
 export type ShopSettingsInput = {
   autoPublishReviews?: boolean;
@@ -66,6 +67,17 @@ export async function updateShopSettings(shopId: string, input: ShopSettingsInpu
   }
 
   return db.orm.public.ShopSettings.where({ id: existing.id }).update(patch);
+}
+
+export async function updateShopSettingsBranding(
+  shopId: string,
+  branding: ShopBranding,
+) {
+  const db = getDb();
+  const existing = await getShopSettings(shopId);
+  return db.orm.public.ShopSettings.where({ id: existing.id }).update({
+    branding: JSON.parse(JSON.stringify(branding)) as never,
+  });
 }
 
 export async function listShopProducts(shopId: string, limit = 100) {

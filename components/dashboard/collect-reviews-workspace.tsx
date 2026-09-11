@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { EmailTemplateEditor } from "@/components/dashboard/email-template-editor";
+import {
+  UI_EMAIL_ID_TO_KIND,
+  type EmailTemplateKind,
+} from "@/services/email/editable-templates";
 
 type SettingsValues = {
   autoPublishReviews: boolean;
@@ -137,6 +142,11 @@ export function CollectReviewsWorkspace({
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [requestsError, setRequestsError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingKind, setEditingKind] = useState<EmailTemplateKind | null>(null);
+  const [customizedKinds, setCustomizedKinds] = useState<
+    Partial<Record<EmailTemplateKind, boolean>>
+  >({});
+
 
   const querySuffix = useMemo(() => {
     const params = new URLSearchParams({ shop });
@@ -170,6 +180,31 @@ export function CollectReviewsWorkspace({
       void loadRequests();
     }
   }, [tab, loadRequests]);
+
+  useEffect(() => {
+    if (tab !== "emails") return;
+    let cancelled = false;
+    async function loadTemplateFlags() {
+      try {
+        const response = await fetch(
+          `/api/email-templates?shop=${encodeURIComponent(shop)}`,
+        );
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+        const next: Partial<Record<EmailTemplateKind, boolean>> = {};
+        for (const item of data.templates ?? []) {
+          next[item.kind as EmailTemplateKind] = Boolean(item.isCustomized);
+        }
+        setCustomizedKinds(next);
+      } catch {
+        // Non-blocking — editor still loads per-template.
+      }
+    }
+    void loadTemplateFlags();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, shop, editingKind]);
 
   async function saveSettings(event: React.FormEvent) {
     event.preventDefault();
@@ -362,12 +397,15 @@ export function CollectReviewsWorkspace({
                 Automated emails
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Templates use your store name and product details. Active emails
-                are already wired in the backend.
+                Preview and edit what customers receive. Saved templates are used
+                on the next send.
               </p>
             </div>
             <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {EMAIL_TYPES.map((item) => (
+              {EMAIL_TYPES.map((item) => {
+                const kind = UI_EMAIL_ID_TO_KIND[item.id];
+                const customized = kind ? customizedKinds[kind] : false;
+                return (
                 <li
                   key={item.id}
                   className="flex flex-wrap items-center justify-between gap-3 px-6 py-4"
@@ -386,6 +424,11 @@ export function CollectReviewsWorkspace({
                       >
                         {item.status}
                       </span>
+                      {customized ? (
+                        <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+                          Customized
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                       {item.description}
@@ -394,25 +437,27 @@ export function CollectReviewsWorkspace({
                   <button
                     type="button"
                     onClick={() => {
-                      if (
-                        item.id === "request" ||
-                        item.id === "reminder" ||
-                        item.id === "photo" ||
-                        item.id === "thanks"
-                      ) {
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }
+                      if (kind) setEditingKind(kind);
                     }}
                     className="btn-secondary"
-                    disabled={item.status !== "Active"}
+                    disabled={item.status !== "Active" || !kind}
                   >
-                    {item.status === "Active" ? "Configure" : "Soon"}
+                    Edit
                   </button>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           </section>
         </div>
+      ) : null}
+
+      {editingKind ? (
+        <EmailTemplateEditor
+          shop={shop}
+          kind={editingKind}
+          onClose={() => setEditingKind(null)}
+        />
       ) : null}
 
       {tab === "requests" ? (
