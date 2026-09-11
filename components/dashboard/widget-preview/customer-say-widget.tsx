@@ -96,7 +96,7 @@ export function CustomerSayWidgetPreview({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="rounded-[1.5rem] border border-zinc-200/90 bg-white/90 p-8 text-sm text-zinc-500 shadow-[0_18px_40px_-28px_rgba(24,24,27,0.35)] dark:border-zinc-800 dark:bg-zinc-950">
         Loading preview…
       </div>
     );
@@ -104,7 +104,7 @@ export function CustomerSayWidgetPreview({
 
   if (!data) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white/70 p-8 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
         Select a product with reviews to preview this widget.
       </div>
     );
@@ -162,20 +162,24 @@ export function CustomerSayWidgetPreview({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 ${
+      className={`relative overflow-hidden rounded-[1.5rem] border border-zinc-200/90 bg-gradient-to-br from-white via-zinc-50/80 to-white text-zinc-950 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_22px_48px_-34px_rgba(24,24,27,0.35)] dark:border-zinc-800 dark:from-zinc-950 dark:via-zinc-900/80 dark:to-zinc-950 dark:text-zinc-50 dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_22px_48px_-30px_rgba(0,0,0,0.75)] ${
         compact ? "text-[13px]" : ""
       }`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-300 to-transparent dark:via-zinc-600"
+      />
       <div className={`grid gap-6 ${compact ? "p-4" : "p-6 md:p-8"}`}>
-        <div className="grid gap-6 md:grid-cols-[9rem_1fr] md:items-start">
+        <div className="grid gap-6 md:grid-cols-[9.5rem_1fr] md:items-start">
           <div className="space-y-2">
-            <p className="text-4xl font-bold tracking-tight md:text-5xl">
+            <p className="font-display text-5xl font-semibold tracking-[-0.04em] md:text-6xl">
               {data.rating ? formatRating(Number(data.rating)) : "—"}
             </p>
             <StarRating
               rating={Math.round(Number(data.rating ?? 0))}
             />
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 md:text-base">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
               {reviewCount.toLocaleString()} approved review
               {reviewCount === 1 ? "" : "s"}
             </p>
@@ -186,7 +190,7 @@ export function CustomerSayWidgetPreview({
               <div className="flex justify-start md:justify-end">
                 <button
                   type="button"
-                  className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
+                  className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-900 transition hover:-translate-y-0.5 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
                 >
                   Write a review
                 </button>
@@ -194,12 +198,12 @@ export function CustomerSayWidgetPreview({
             ) : (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-2xl font-bold tracking-tight text-zinc-950 md:text-3xl dark:text-zinc-50">
+                  <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] text-zinc-950 md:text-4xl dark:text-zinc-50">
                     What customer says
                   </h2>
                   <button
                     type="button"
-                    className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
+                    className="w-full shrink-0 rounded-full border border-zinc-900 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-900 transition hover:-translate-y-0.5 md:w-auto dark:border-zinc-100 dark:text-zinc-100"
                   >
                     Write a review
                   </button>
@@ -207,7 +211,7 @@ export function CustomerSayWidgetPreview({
                 <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
                   {summaryText}
                 </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                   Summarised from {summarySourceCount.toLocaleString()} approved
                   reviews{monthLabel ? ` • ${monthLabel}` : ""}
                 </p>
@@ -250,7 +254,7 @@ export function CustomerSayWidgetPreview({
                 key={snippet.id}
                 className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/60"
               >
-                <p className="text-sm leading-6 text-zinc-800 dark:text-zinc-200">
+                <p className="font-display text-[1.05rem] leading-6 tracking-[-0.015em] text-zinc-800 dark:text-zinc-200">
                   “{snippet.quote}”
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">

@@ -261,18 +261,20 @@
 }
 
 .or-customer-say {
-  --or-star-color: #18181b;
+  --or-star-color: currentColor;
   --or-star-size: 18px;
   --or-text: inherit;
-  --or-muted: color-mix(in srgb, currentColor 58%, transparent);
-  --or-border: color-mix(in srgb, currentColor 16%, transparent);
-  --or-surface: color-mix(in srgb, currentColor 5%, transparent);
-  --or-cs-gap: 1.25rem;
+  --or-muted: color-mix(in srgb, currentColor 55%, transparent);
+  --or-border: color-mix(in srgb, currentColor 14%, transparent);
+  --or-surface: color-mix(in srgb, currentColor 4.5%, transparent);
+  --or-cs-gap: 1.35rem;
+  --or-cs-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype",
+    Palatino, Georgia, serif;
   color: inherit;
   font-family: inherit;
   font-size: 1rem;
-  line-height: 1.5;
-  padding: 1.25rem 0 1.75rem;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
 }
 
 .or-customer-say--placeholder .or-customer-say__text {
@@ -282,19 +284,44 @@
 }
 
 .or-customer-say__shell {
+  position: relative;
   border: 1px solid var(--or-border);
-  border-radius: 1.25rem;
-  padding: 1.25rem;
+  border-radius: 1.5rem;
+  padding: 1.35rem;
   display: grid;
   gap: var(--or-cs-gap);
-  background: transparent;
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, currentColor 3.5%, transparent),
+      transparent 42%
+    ),
+    color-mix(in srgb, #fff 72%, transparent);
   color: inherit;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset,
+    0 22px 48px -34px color-mix(in srgb, currentColor 35%, transparent);
+  overflow: hidden;
+}
+
+.or-customer-say__shell::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, currentColor 35%, transparent),
+    transparent
+  );
+  pointer-events: none;
 }
 
 @media (min-width: 768px) {
   .or-customer-say__shell {
-    padding: 1.75rem 2rem;
-    gap: 1.5rem;
+    padding: 1.9rem 2.15rem;
+    gap: 1.65rem;
   }
 }
 
@@ -311,7 +338,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.95rem;
 }
 
 @media (min-width: 768px) {
@@ -326,57 +353,68 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid currentColor;
+  border: 1px solid currentColor;
   border-radius: 999px;
-  padding: 0.65rem 1.15rem;
-  font-size: 0.9375rem;
-  font-weight: 650;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   line-height: 1.2;
   color: inherit;
   text-decoration: none;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .or-customer-say__write-review:hover {
-  opacity: 0.85;
+  opacity: 0.92;
   background: var(--or-surface);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -18px color-mix(in srgb, currentColor 45%, transparent);
 }
 
 .or-customer-say__hero {
   display: grid;
-  gap: 1.15rem;
+  gap: 1.25rem;
 }
 
 @media (min-width: 768px) {
   .or-customer-say__hero {
-    grid-template-columns: minmax(7.5rem, 9rem) minmax(0, 1fr);
+    grid-template-columns: minmax(7.5rem, 9.5rem) minmax(0, 1fr);
     align-items: start;
-    gap: 1.75rem;
+    gap: 2rem;
   }
 }
 
 .or-customer-say__score {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.45rem;
   justify-items: start;
 }
 
 .or-customer-say__average {
   margin: 0;
-  font-size: clamp(2.25rem, 5vw, 2.75rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  font-family: var(--or-cs-display);
+  font-size: clamp(2.6rem, 5.5vw, 3.35rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
   color: inherit;
 }
 
 .or-customer-say__verified {
-  margin: 0.2rem 0 0;
-  font-size: 0.9375rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
   font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--or-muted);
 }
 
@@ -386,10 +424,11 @@
 
 .or-customer-say__heading {
   margin: 0;
-  font-size: clamp(1.5rem, 3.2vw, 2rem);
-  font-weight: 700;
+  font-family: var(--or-cs-display);
+  font-size: clamp(1.85rem, 3.6vw, 2.45rem);
+  font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.08;
   text-transform: none;
   color: inherit;
 }
@@ -397,42 +436,45 @@
 .or-customer-say__text {
   margin: 0;
   font-size: 1.0625rem;
-  line-height: 1.65;
+  line-height: 1.7;
   color: inherit;
-  opacity: 0.95;
+  opacity: 0.92;
 }
 
 .or-customer-say__meta {
-  margin: 0.75rem 0 0;
-  font-size: 0.875rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.8125rem;
   line-height: 1.45;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--or-muted);
 }
 
 .or-customer-say__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.6rem;
 }
 
 .or-customer-say__tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   border: 1px solid var(--or-border);
   border-radius: 999px;
-  background: var(--or-surface);
-  padding: 0.45rem 0.85rem;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+  padding: 0.5rem 0.95rem;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
   color: inherit;
   cursor: pointer;
   text-decoration: none;
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
 button.or-customer-say__tag {
@@ -442,13 +484,14 @@ button.or-customer-say__tag {
 
 .or-customer-say__tag:hover,
 .or-customer-say__tag:focus-visible {
-  border-color: color-mix(in srgb, currentColor 45%, var(--or-border));
+  border-color: color-mix(in srgb, currentColor 40%, var(--or-border));
+  transform: translateY(-1px);
   outline: none;
 }
 
 .or-customer-say__tag.is-active {
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 8%, var(--or-surface));
+  background: color-mix(in srgb, currentColor 8%, transparent);
   box-shadow: inset 0 0 0 1px currentColor;
 }
 
@@ -459,9 +502,9 @@ button.or-customer-say__tag {
   justify-content: space-between;
   gap: 0.65rem 1rem;
   border: 1px solid var(--or-border);
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   background: var(--or-surface);
-  padding: 0.75rem 0.95rem;
+  padding: 0.85rem 1rem;
 }
 
 .or-customer-say__filter-text {
@@ -503,7 +546,7 @@ button.or-customer-say__tag {
 
 .or-customer-say__snippets {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.95rem;
 }
 
 @media (min-width: 768px) {
@@ -520,15 +563,29 @@ button.or-customer-say__tag {
 
 .or-customer-say__snippet {
   border: 1px solid var(--or-border);
-  border-radius: 1rem;
-  background: var(--or-surface);
-  padding: 1.1rem 1.15rem;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, currentColor 4%, transparent),
+      transparent 55%
+    ),
+    var(--or-surface);
+  padding: 1.2rem 1.2rem 1.15rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.or-customer-say__snippet:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px -24px color-mix(in srgb, currentColor 40%, transparent);
 }
 
 .or-customer-say__quote {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.55;
+  font-family: var(--or-cs-display);
+  font-size: 1.15rem;
+  line-height: 1.45;
+  letter-spacing: -0.015em;
   color: inherit;
 }
 
@@ -553,31 +610,35 @@ button.or-customer-say__tag {
 }
 
 .or-customer-say__review-date {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: color-mix(in srgb, currentColor 62%, transparent);
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, currentColor 58%, transparent);
   white-space: nowrap;
   opacity: 1;
 }
 
 .or-customer-say__snippet-meta {
-  margin-top: 0.85rem;
-  font-size: 0.875rem;
+  margin-top: 0.95rem;
+  font-size: 0.8125rem;
 }
 
 .or-customer-say__author {
   font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
 .or-customer-say__verified-badge {
   display: inline-flex;
   align-items: center;
-  color: #059669;
-  background: color-mix(in srgb, #34d399 16%, transparent);
+  color: #047857;
+  background: color-mix(in srgb, #34d399 14%, transparent);
   border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.8125rem;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.75rem;
   font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .or-customer-say__listing {
@@ -658,9 +719,21 @@ button.or-customer-say__tag {
   align-items: flex-start;
   gap: 0.85rem;
   border: 1px solid var(--or-border);
-  border-radius: 1rem;
-  padding: 1.1rem 1.15rem;
-  background: transparent;
+  border-radius: 1.15rem;
+  padding: 1.15rem 1.2rem;
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, currentColor 3%, transparent),
+      transparent 50%
+    ),
+    transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.or-customer-say__review-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px -24px color-mix(in srgb, currentColor 35%, transparent);
 }
 
 @media (min-width: 640px) {
@@ -686,9 +759,10 @@ button.or-customer-say__tag {
 }
 
 .or-customer-say__review-name {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--or-cs-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: inherit;
 }
 

@@ -341,7 +341,7 @@ export function ManageReviewsWorkspace({
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+          <h1 className="lux-page-title">
             Manage reviews
           </h1>
           <div className="mt-4 inline-flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">

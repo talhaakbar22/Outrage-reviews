@@ -52,27 +52,27 @@ export function WidgetsWorkspace({
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-          Widgets
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Add review widgets to your storefront theme. Preview how they look before
-          publishing.
+        <p className="lux-eyebrow">Storefront</p>
+        <h1 className="lux-page-title mt-2">Luxury review widgets</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Editorial review experiences for your product pages — refined typography,
+          soft surfaces, and a premium reading feel that still matches your zinc
+          brand palette.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <article className="overflow-hidden rounded-2xl border border-zinc-950 bg-white ring-2 ring-zinc-950 dark:border-zinc-50 dark:bg-zinc-950 dark:ring-zinc-50">
-          <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
+        <article className="overflow-hidden rounded-[1.5rem] border border-zinc-950/90 bg-white shadow-[0_22px_48px_-34px_rgba(24,24,27,0.45)] ring-1 ring-zinc-950/10 dark:border-zinc-50 dark:bg-zinc-950 dark:shadow-[0_22px_48px_-30px_rgba(0,0,0,0.8)] dark:ring-zinc-50/10">
+          <div className="border-b border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-100 p-4 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
+            <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-zinc-700 dark:bg-zinc-950">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+                  <div className="font-display text-2xl font-semibold tracking-[-0.03em] text-zinc-950 dark:text-zinc-50">
                     4.9
                   </div>
                   <div className="text-zinc-900 dark:text-zinc-100">★★★★★</div>
                 </div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-700 dark:text-zinc-300">
+                <p className="font-display text-lg font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
                   What customers say
                 </p>
                 <p className="line-clamp-3 text-[11px] leading-5 text-zinc-600 dark:text-zinc-400">
@@ -83,7 +83,7 @@ export function WidgetsWorkspace({
                   {["Quality 24", "Gift 12", "Delivery 8"].map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] tracking-[0.02em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                     >
                       {tag}
                     </span>
@@ -94,7 +94,7 @@ export function WidgetsWorkspace({
           </div>
 
           <div className="space-y-3 p-5">
-            <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+            <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-zinc-950 dark:text-zinc-50">
               What customers say
             </h2>
             <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">

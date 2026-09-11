@@ -34,17 +34,17 @@ export function DashboardNav() {
   }
 
   return (
-    <nav className="flex flex-wrap gap-1 text-sm">
+    <nav className="flex flex-wrap gap-1 rounded-full border border-zinc-200/80 bg-zinc-100/70 p-1 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none">
       {navItems.map((item) => {
         const active = isActive(item.href, item.exact);
         return (
           <Link
             key={item.href}
             href={hrefFor(item.href)}
-            className={`rounded-lg px-3 py-1.5 transition ${
+            className={`rounded-full px-3 py-1.5 transition duration-200 ${
               active
-                ? "bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-950"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+                ? "bg-zinc-950 text-white shadow-[0_8px_20px_-14px_rgba(24,24,27,0.8)] dark:bg-zinc-50 dark:text-zinc-950"
+                : "text-zinc-600 hover:bg-white/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
             }`}
           >
             {item.label}
