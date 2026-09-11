@@ -8,6 +8,7 @@ const navItems = [
   { href: "/dashboard/reviews", label: "Manage reviews" },
   { href: "/dashboard/collect", label: "Collect reviews" },
   { href: "/dashboard/widgets", label: "Widgets" },
+  { href: "/dashboard/referrals", label: "Referrals" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/media", label: "Media" },
   { href: "/dashboard/analytics", label: "Analytics" },
