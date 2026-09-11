@@ -69,10 +69,15 @@ export async function resolveProductByHandle(shopId: string, handle: string | nu
     return null;
   }
 
+  const normalized = handle.trim();
+  if (!normalized) {
+    return null;
+  }
+
   const db = getDb();
   const product = await db.orm.public.Product.where({
     shopId,
-    handle,
+    handle: normalized,
   }).first();
 
   return product?.id ?? null;
@@ -82,12 +87,13 @@ export async function resolveProductForLooxRow(
   shopId: string,
   input: { productHandle: string | null; shopifyProductId: string | null },
 ) {
-  const byHandle = await resolveProductByHandle(shopId, input.productHandle);
-  if (byHandle) {
-    return byHandle;
+  // Prefer exact Shopify product ID when present (handles can be renamed in Loox).
+  const byId = await resolveProductId(shopId, input.shopifyProductId);
+  if (byId) {
+    return byId;
   }
 
-  return resolveProductId(shopId, input.shopifyProductId);
+  return resolveProductByHandle(shopId, input.productHandle);
 }
 
 export async function getProductById(productId: string) {

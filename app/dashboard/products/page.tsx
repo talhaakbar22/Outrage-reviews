@@ -1,18 +1,58 @@
-import Image from "next/image";
-import {
-  requireDashboardShop,
-} from "@/lib/dashboard/shop-context";
-import { listShopProducts } from "@/services/dashboard/data";
-import { formatRating } from "@/components/dashboard/review-ui";
+import { Suspense } from "react";
+import { requireDashboardShop } from "@/lib/dashboard/shop-context";
+import { listShopProductsPage } from "@/services/dashboard/data";
+import { ProductsWorkspace } from "@/components/dashboard/products-workspace";
 
 type ProductsPageProps = {
-  searchParams: Promise<{ shop?: string; host?: string }>;
+  searchParams: Promise<{
+    shop?: string;
+    host?: string;
+    q?: string;
+    status?: string;
+    hasReviews?: string;
+    minRating?: string;
+    sort?: string;
+    page?: string;
+  }>;
 };
+
+function parseStatus(value: string | undefined) {
+  if (value === "active" || value === "archived" || value === "draft") {
+    return value;
+  }
+  return "all" as const;
+}
+
+function parseHasReviews(value: string | undefined) {
+  if (value === "with" || value === "without") return value;
+  return "all" as const;
+}
+
+function parseSort(value: string | undefined) {
+  if (value === "rating" || value === "reviews") return value;
+  return "title" as const;
+}
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
-  const { shop } = await requireDashboardShop(params);
-  const products = await listShopProducts(shop.id);
+  const { shop, query } = await requireDashboardShop(params);
+
+  const page = Math.max(Number(params.page ?? "1") || 1, 1);
+  const minRatingRaw = Number(params.minRating);
+  const minRating =
+    Number.isFinite(minRatingRaw) && minRatingRaw >= 1 && minRatingRaw <= 5
+      ? minRatingRaw
+      : null;
+
+  const result = await listShopProductsPage(shop.id, {
+    search: params.q?.trim() || undefined,
+    status: parseStatus(params.status),
+    hasReviews: parseHasReviews(params.hasReviews),
+    minRating,
+    sort: parseSort(params.sort),
+    page,
+    pageSize: 20,
+  });
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -23,69 +63,24 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         Synced Shopify products with live rating summaries.
       </p>
 
-      {products.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
-          No products synced yet. Complete OAuth install and wait for the initial
-          sync job.
-        </div>
-      ) : (
-        <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
-              <tr>
-                <th className="px-4 py-3 font-medium">Product</th>
-                <th className="px-4 py-3 font-medium">Rating</th>
-                <th className="px-4 py-3 font-medium">Reviews</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr
-                  key={product.id}
-                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt=""
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 rounded-lg object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-900">
-                          —
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-zinc-950 dark:text-zinc-50">
-                          {product.title}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {product.handle ?? product.shopifyProductId}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                    {formatRating(product.avgRating ?? 0)}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                    {product.reviewCount}
-                  </td>
-                  <td className="px-4 py-3 capitalize text-zinc-700 dark:text-zinc-300">
-                    {product.status}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <Suspense fallback={<p className="mt-8 text-sm text-zinc-500">Loading…</p>}>
+        <ProductsWorkspace
+          shop={shop.shopifyDomain}
+          host={query.host}
+          products={result.products}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          totalPages={result.totalPages}
+          filters={{
+            q: params.q?.trim() ?? "",
+            status: parseStatus(params.status),
+            hasReviews: parseHasReviews(params.hasReviews),
+            minRating: minRating ? String(minRating) : "all",
+            sort: parseSort(params.sort),
+          }}
+        />
+      </Suspense>
     </main>
   );
 }
