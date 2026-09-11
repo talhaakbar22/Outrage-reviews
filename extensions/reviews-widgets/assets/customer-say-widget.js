@@ -615,7 +615,7 @@
         filterBanner.hidden = false;
         if (filterLabel) {
           filterLabel.textContent =
-            'Showing reviews for “‘ + state.highlightLabel + '”';
+            'Showing reviews for "' + state.highlightLabel + '"';
         }
       } else {
         filterBanner.hidden = true;
