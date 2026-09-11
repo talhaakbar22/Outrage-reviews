@@ -103,6 +103,8 @@ export function ManageReviewsWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [draftQ, setDraftQ] = useState("");
   const [draftStatus, setDraftStatus] = useState("all");
@@ -118,6 +120,8 @@ export function ManageReviewsWorkspace({
   const [sort, setSort] = useState<"newest" | "oldest" | "highest" | "lowest">(
     "newest",
   );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
@@ -130,6 +134,21 @@ export function ManageReviewsWorkspace({
     return params.toString();
   }, [shopDomain, host]);
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const pageNumbers = useMemo(() => {
+    const size = 5;
+    if (totalPages <= size) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    let start = Math.max(1, page - Math.floor(size / 2));
+    let end = start + size - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - size + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [page, totalPages]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -138,7 +157,8 @@ export function ManageReviewsWorkspace({
         shop: shopDomain,
         meta: "1",
         sort,
-        limit: "50",
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
       });
       if (appliedStatus !== "all") params.set("status", appliedStatus);
       if (appliedRating !== "all") params.set("rating", appliedRating);
@@ -156,6 +176,12 @@ export function ManageReviewsWorkspace({
       setProducts(data.products ?? []);
       setSettings(data.settings ?? null);
       setSelected(new Set());
+
+      const nextTotal = Number(data.total ?? 0);
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / pageSize) || 1);
+      if (page > nextTotalPages) {
+        setPage(nextTotalPages);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reviews");
     } finally {
@@ -164,6 +190,8 @@ export function ManageReviewsWorkspace({
   }, [
     shopDomain,
     sort,
+    page,
+    pageSize,
     appliedStatus,
     appliedRating,
     appliedProductId,
@@ -176,6 +204,7 @@ export function ManageReviewsWorkspace({
   }, [load]);
 
   function applyFilters() {
+    setPage(1);
     setAppliedQ(draftQ);
     setAppliedStatus(draftStatus);
     setAppliedRating(draftRating);
@@ -194,6 +223,41 @@ export function ManageReviewsWorkspace({
     setAppliedRating("all");
     setAppliedProductId("all");
     setAppliedHasMedia(false);
+    setPage(1);
+  }
+
+  async function exportAllReviews() {
+    setActionsOpen(false);
+    setExporting(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/reviews/export?shop=${encodeURIComponent(shopDomain)}`,
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Export failed",
+        );
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] || `reviews-export.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function toggleSelected(id: string) {
@@ -330,22 +394,93 @@ export function ManageReviewsWorkspace({
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="font-medium text-zinc-950 dark:text-zinc-50">
                 Total {total.toLocaleString()} reviews
               </span>
+              <span
+                aria-hidden
+                className="hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-700"
+              />
               <span className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
                 <StarRating rating={Math.round(averageRating)} />
-                <span className="font-semibold">{averageRating ? averageRating.toFixed(1) : "—"}</span>
+                <span className="font-semibold">
+                  {averageRating ? averageRating.toFixed(1) : "—"}
+                </span>
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setImportOpen((open) => !open)}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            >
-              Import reviews
-            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="More actions"
+                  aria-expanded={actionsOpen}
+                  aria-haspopup="menu"
+                  disabled={exporting}
+                  onClick={() => setActionsOpen((open) => !open)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg leading-none text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  …
+                </button>
+                {actionsOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close actions menu"
+                      className="fixed inset-0 z-10 cursor-default"
+                      onClick={() => setActionsOpen(false)}
+                    />
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={exporting || total === 0}
+                        onClick={() => void exportAllReviews()}
+                        className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-zinc-900 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-50 dark:hover:bg-zinc-800"
+                      >
+                        {exporting
+                          ? "Exporting…"
+                          : `Export all reviews (${total.toLocaleString()})`}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActionsOpen(false);
+                  setImportOpen((open) => !open);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 20 20"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
+                  <path
+                    d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M4 14.5V16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Import reviews
+              </button>
+            </div>
           </div>
 
           {importOpen ? (
@@ -482,9 +617,10 @@ export function ManageReviewsWorkspace({
 
             <select
               value={sort}
-              onChange={(event) =>
-                setSort(event.target.value as typeof sort)
-              }
+              onChange={(event) => {
+                setPage(1);
+                setSort(event.target.value as typeof sort);
+              }}
               className="form-control w-auto"
             >
               <option value="newest">Newest first</option>
@@ -721,6 +857,91 @@ export function ManageReviewsWorkspace({
               })}
             </div>
           )}
+
+          {total > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <label className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <span>Show per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(event) => {
+                    setPageSize(Number(event.target.value));
+                    setPage(1);
+                  }}
+                  className="form-control w-auto min-w-[8.5rem]"
+                >
+                  {[15, 25, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size} reviews
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  aria-label="First page"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(1)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm text-zinc-700 disabled:opacity-35 dark:text-zinc-300"
+                >
+                  |&lt;
+                </button>
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm text-zinc-700 disabled:opacity-35 dark:text-zinc-300"
+                >
+                  &lt;
+                </button>
+
+                {pageNumbers.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-current={value === page ? "page" : undefined}
+                    disabled={loading}
+                    onClick={() => setPage(value)}
+                    className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-medium ${
+                      value === page
+                        ? "bg-zinc-200 text-zinc-950 dark:bg-zinc-700 dark:text-zinc-50"
+                        : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    {value}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  disabled={page >= totalPages || loading}
+                  onClick={() =>
+                    setPage((current) => Math.min(totalPages, current + 1))
+                  }
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm text-zinc-700 disabled:opacity-35 dark:text-zinc-300"
+                >
+                  &gt;
+                </button>
+                <button
+                  type="button"
+                  aria-label="Last page"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage(totalPages)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm text-zinc-700 disabled:opacity-35 dark:text-zinc-300"
+                >
+                  &gt;|
+                </button>
+
+                <span className="ml-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Page {page} of {totalPages}
+                </span>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
     </div>
