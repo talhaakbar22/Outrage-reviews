@@ -1,0 +1,41 @@
+{% comment %}
+  Onsite referral sidebar tab.
+{% endcomment %}
+
+{% liquid
+  if block.settings.api_base_url != blank
+    assign referral_endpoint = block.settings.api_base_url | append: '/api/storefront/referrals'
+  else
+    assign referral_endpoint = '/apps/outrage-reviews/referrals'
+  endif
+%}
+
+<div
+  class="or-referral or-referral--sidebar"
+  data-outrage-referral
+  data-widget="onsite_sidebar"
+  data-source="onsite"
+  data-mode="advocate"
+  data-shop="{{ shop.permanent_domain }}"
+  data-endpoint="{{ referral_endpoint | escape }}"
+  {{ block.shopify_attributes }}
+  hidden
+></div>
+
+<script src="{{ 'referral-widget.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Referral sidebar",
+  "target": "body",
+  "stylesheet": "reviews-widget.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "API base URL (optional)",
+      "info": "Leave blank to use the app proxy."
+    }
+  ]
+}
+{% endschema %}

@@ -7,6 +7,9 @@ export const SHOPIFY_SCOPES = [
   "write_products",
   "read_orders",
   "read_customers",
+  "write_customers",
+  "write_discounts",
+  "write_app_proxy",
 ] as const;
 
 export type ShopifyScope = (typeof SHOPIFY_SCOPES)[number];

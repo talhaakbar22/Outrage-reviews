@@ -24,6 +24,14 @@
       "model": "Product",
       "namespace": "public"
     },
+    "referral_advocate": {
+      "model": "ReferralAdvocate",
+      "namespace": "public"
+    },
+    "referral_redemption": {
+      "model": "ReferralRedemption",
+      "namespace": "public"
+    },
     "review": {
       "model": "Review",
       "namespace": "public"
@@ -83,6 +91,48 @@
               {
                 "name": "Draft",
                 "value": "draft"
+              }
+            ]
+          },
+          "ReferralRedemptionStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "Issued",
+                "value": "issued"
+              },
+              {
+                "name": "Used",
+                "value": "used"
+              },
+              {
+                "name": "Rewarded",
+                "value": "rewarded"
+              },
+              {
+                "name": "Blocked",
+                "value": "blocked"
+              },
+              {
+                "name": "Expired",
+                "value": "expired"
+              }
+            ]
+          },
+          "ReferralSource": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "Onsite",
+                "value": "onsite"
+              },
+              {
+                "name": "PostReview",
+                "value": "post_review"
+              },
+              {
+                "name": "PostPurchase",
+                "value": "post_purchase"
               }
             ]
           },
@@ -1119,6 +1169,412 @@
               "table": "product"
             }
           },
+          "ReferralAdvocate": {
+            "fields": {
+              "code": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "customerId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastRewardedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "marketingConsent": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rewardCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "shopId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "shopifyCustomerId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "source": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ReferralSource",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "redemptions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "advocateId"
+                  ]
+                },
+                "to": {
+                  "model": "ReferralRedemption",
+                  "namespace": "public"
+                }
+              },
+              "shop": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "shopId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Shop",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "code": {
+                  "column": "code"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "customerId": {
+                  "column": "customerId"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastRewardedAt": {
+                  "column": "lastRewardedAt"
+                },
+                "marketingConsent": {
+                  "column": "marketingConsent"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "rewardCount": {
+                  "column": "rewardCount"
+                },
+                "shopId": {
+                  "column": "shopId"
+                },
+                "shopifyCustomerId": {
+                  "column": "shopifyCustomerId"
+                },
+                "source": {
+                  "column": "source"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "referral_advocate"
+            }
+          },
+          "ReferralRedemption": {
+            "fields": {
+              "advocateId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "blockedReason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "discountCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "friendCustomerId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "friendDiscountType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "friendDiscountValue": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "friendEmail": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "minimumPurchase": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "orderId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "rewardedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "shopId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "shopifyDiscountId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "shopifyOrderId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ReferralRedemptionStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "usedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "advocate": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "advocateId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ReferralAdvocate",
+                  "namespace": "public"
+                }
+              },
+              "shop": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "shopId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Shop",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "advocateId": {
+                  "column": "advocateId"
+                },
+                "blockedReason": {
+                  "column": "blockedReason"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "discountCode": {
+                  "column": "discountCode"
+                },
+                "friendCustomerId": {
+                  "column": "friendCustomerId"
+                },
+                "friendDiscountType": {
+                  "column": "friendDiscountType"
+                },
+                "friendDiscountValue": {
+                  "column": "friendDiscountValue"
+                },
+                "friendEmail": {
+                  "column": "friendEmail"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "minimumPurchase": {
+                  "column": "minimumPurchase"
+                },
+                "orderId": {
+                  "column": "orderId"
+                },
+                "rewardedAt": {
+                  "column": "rewardedAt"
+                },
+                "shopId": {
+                  "column": "shopId"
+                },
+                "shopifyDiscountId": {
+                  "column": "shopifyDiscountId"
+                },
+                "shopifyOrderId": {
+                  "column": "shopifyOrderId"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "usedAt": {
+                  "column": "usedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "referral_redemption"
+            }
+          },
           "Review": {
             "fields": {
               "body": {
@@ -2084,6 +2540,36 @@
                 },
                 "to": {
                   "model": "Product",
+                  "namespace": "public"
+                }
+              },
+              "referralAdvocates": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "shopId"
+                  ]
+                },
+                "to": {
+                  "model": "ReferralAdvocate",
+                  "namespace": "public"
+                }
+              },
+              "referralRedemptions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "shopId"
+                  ]
+                },
+                "to": {
+                  "model": "ReferralRedemption",
                   "namespace": "public"
                 }
               },
@@ -3514,6 +4000,347 @@
                   "columns": [
                     "shopId",
                     "shopifyProductId"
+                  ]
+                }
+              ]
+            },
+            "referral_advocate": {
+              "checks": [
+                {
+                  "expression": "\"source\" IN ('onsite', 'post_review', 'post_purchase')",
+                  "name": "referral_advocate_source_check_e559564c",
+                  "prefix": "referral_advocate_source_check"
+                }
+              ],
+              "columns": {
+                "code": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "customerId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": true
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "lastRewardedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "marketingConsent": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "rewardCount": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "shopId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "shopifyCustomerId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "source": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "onsite"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ReferralSource",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "shopId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "referral_advocate"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shop"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "shopId"
+                  ],
+                  "name": "referral_advocate_shopId_idx_e9207c6b",
+                  "prefix": "referral_advocate_shopId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "shopId",
+                    "email"
+                  ]
+                },
+                {
+                  "columns": [
+                    "shopId",
+                    "code"
+                  ]
+                }
+              ]
+            },
+            "referral_redemption": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('issued', 'used', 'rewarded', 'blocked', 'expired')",
+                  "name": "referral_redemption_status_check_10eecb34",
+                  "prefix": "referral_redemption_status_check"
+                }
+              ],
+              "columns": {
+                "advocateId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "blockedReason": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "discountCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "friendCustomerId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "friendDiscountType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "friendDiscountValue": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "friendEmail": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "minimumPurchase": {
+                  "codecId": "pg/float8@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "orderId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": true
+                },
+                "rewardedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "shopId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "shopifyDiscountId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "shopifyOrderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "issued"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ReferralRedemptionStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "usedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "shopId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "referral_redemption"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shop"
+                  }
+                },
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "advocateId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "referral_redemption"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "referral_advocate"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "advocateId"
+                  ],
+                  "name": "referral_redemption_advocateId_idx_b3936fd6",
+                  "prefix": "referral_redemption_advocateId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "shopId"
+                  ],
+                  "name": "referral_redemption_shopId_idx_e9207c6b",
+                  "prefix": "referral_redemption_shopId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "shopId",
+                    "status"
+                  ],
+                  "name": "referral_redemption_shopId_status_idx_3e6d6af5",
+                  "prefix": "referral_redemption_shopId_status_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "shopId",
+                    "discountCode"
                   ]
                 }
               ]
@@ -4963,6 +5790,24 @@
                 "draft"
               ]
             },
+            "ReferralRedemptionStatus": {
+              "kind": "valueSet",
+              "values": [
+                "issued",
+                "used",
+                "rewarded",
+                "blocked",
+                "expired"
+              ]
+            },
+            "ReferralSource": {
+              "kind": "valueSet",
+              "values": [
+                "onsite",
+                "post_review",
+                "post_purchase"
+              ]
+            },
             "ReviewMediaType": {
               "kind": "valueSet",
               "values": [
@@ -5034,10 +5879,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "b41e2437cefdcefb96eec5608c89eea1fcbf05c69e5f61641424808c573b4ff7"
+    "storageHash": "50be6d9521da40d5b647d92cd3e61ec3a3a2d245570ec479c4c3e15038c587ce"
   },
   "execution": {
-    "executionHash": "d739d294cd2d0e42019cb5cf604caf8481b9fa5dd720c3efeb4a6c8d8876869f",
+    "executionHash": "b17b7af829d6dddaf2015810cf529bf5ab7a1b9d9460f324399ebee27ecc04c0",
     "mutations": {
       "defaults": [
         {
@@ -5168,6 +6013,58 @@
             "column": "updatedAt",
             "namespace": "public",
             "table": "product"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "referral_advocate"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "referral_advocate"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "referral_redemption"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "referral_redemption"
           }
         },
         {

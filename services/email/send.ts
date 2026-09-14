@@ -86,7 +86,7 @@ async function deliverViaResend(input: {
   return { provider: "resend", id: data.id ?? null };
 }
 
-async function deliverEmail(input: {
+export async function deliverEmail(input: {
   to: string;
   subject: string;
   text: string;

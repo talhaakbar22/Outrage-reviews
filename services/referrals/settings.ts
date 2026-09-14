@@ -448,31 +448,11 @@ export async function saveReferralSettings(
 export async function listReferralAdvocates(
   shopId: string,
 ): Promise<ReferralAdvocate[]> {
-  const settings = await getShopSettings(shopId);
-  const branding = (settings.branding ?? {}) as BrandingWithReferrals;
-  const list = Array.isArray(branding.referralAdvocates)
-    ? branding.referralAdvocates
-    : [];
-  return list
-    .map((row) => {
-      if (!row || typeof row !== "object") return null;
-      const item = row as Partial<ReferralAdvocate>;
-      if (!item.id || !item.email || !item.code) return null;
-      return {
-        id: String(item.id),
-        email: String(item.email),
-        name: item.name ? String(item.name) : null,
-        code: String(item.code),
-        source:
-          item.source === "post_review" || item.source === "post_purchase"
-            ? item.source
-            : "onsite",
-        rewardCount: Math.max(0, Number(item.rewardCount ?? 0)),
-        createdAt: String(item.createdAt ?? new Date().toISOString()),
-        marketingConsent: Boolean(item.marketingConsent),
-      } satisfies ReferralAdvocate;
-    })
-    .filter((row): row is ReferralAdvocate => Boolean(row));
+  const { listAdvocatesForShop, toAdvocateCsvRow } = await import(
+    "@/services/referrals/engine"
+  );
+  const rows = await listAdvocatesForShop(shopId);
+  return rows.map((row) => toAdvocateCsvRow(row));
 }
 
 export function buildAdvocatesCsv(advocates: ReferralAdvocate[]) {

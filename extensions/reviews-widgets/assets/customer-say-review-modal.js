@@ -132,6 +132,7 @@
       submitting: false,
       error: null,
       message: null,
+      referral: null,
     };
     this.overlay = null;
     this._mediaSeq = 0;
@@ -886,6 +887,16 @@
           "</div></div>"
         : "") +
       '<button type="button" class="or-review-modal__thanks-btn" data-or-review-close-btn>Done</button>' +
+      (this.state.referral && this.state.referral.active
+        ? '<div class="or-referral or-referral--post-review" style="margin-top:1rem;text-align:left;">' +
+          '<p class="or-referral__eyebrow">Share the love</p>' +
+          '<h3 class="or-referral__title">' +
+          escapeHtml(this.state.referral.headline || "Refer a friend") +
+          "</h3>" +
+          '<p class="or-referral__copy">Invite friends with your personal referral link.</p>' +
+          '<button type="button" class="or-referral__submit" data-or-referral-invite>Get my referral link</button>' +
+          '<div data-or-referral-inline-result></div></div>'
+        : "") +
       "</div>"
     );
   };
@@ -897,6 +908,53 @@
       closeBtn.addEventListener("click", function () {
         self.close();
         window.location.reload();
+      });
+    }
+
+    var inviteBtn = content.querySelector("[data-or-referral-invite]");
+    if (inviteBtn && self.state.referral) {
+      inviteBtn.addEventListener("click", function () {
+        var result = content.querySelector("[data-or-referral-inline-result]");
+        inviteBtn.disabled = true;
+        inviteBtn.textContent = "Creating…";
+        fetch(self.state.referral.endpoint || "/apps/outrage-reviews/referrals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            action: "signup",
+            email: self.state.email || self.state.referral.email,
+            name: [self.state.firstName, self.state.lastName].filter(Boolean).join(" "),
+            source: "post_review",
+            product_title: self.state.referral.productTitle || self.config.productTitle,
+          }),
+        })
+          .then(function (response) {
+            return response.json().then(function (data) {
+              if (!response.ok) throw new Error(data.error || "Failed");
+              return data;
+            });
+          })
+          .then(function (data) {
+            if (result) {
+              result.innerHTML =
+                '<p class="or-referral__success">Your link is ready.</p>' +
+                '<input class="or-referral__input" readonly value="' +
+                escapeHtml(data.shareUrl) +
+                '" />';
+            }
+            inviteBtn.textContent = "Link ready";
+          })
+          .catch(function (error) {
+            inviteBtn.disabled = false;
+            inviteBtn.textContent = "Get my referral link";
+            if (result) {
+              result.innerHTML =
+                '<p class="or-referral__error">' +
+                escapeHtml(error instanceof Error ? error.message : "Failed") +
+                "</p>";
+            }
+          });
       });
     }
   };
@@ -1241,6 +1299,7 @@
       }
 
       this.state.message = data.message || "Thank you! Your review has been submitted.";
+      this.state.referral = data.referral || null;
       this.state.step = "thanks";
       this.state.submitting = false;
       this.render();

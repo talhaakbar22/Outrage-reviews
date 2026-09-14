@@ -13,11 +13,14 @@ export async function GET(request: NextRequest) {
   }
 
   const settings = await getReferralSettings(auth.shop.id);
+  const { listReferralAdvocates } = await import("@/services/referrals/settings");
+  const advocates = await listReferralAdvocates(auth.shop.id);
   return NextResponse.json({
     ok: true,
     settings,
     currency: auth.shop.currency ?? "GBP",
     shopName: auth.shop.name ?? auth.shop.shopifyDomain,
+    advocateCount: advocates.length,
   });
 }
 

@@ -89,6 +89,8 @@ model Shop {
   syncJobs        SyncJob[]
   settings        ShopSettings?
   aiSummaries     AiSummary[]
+  referralAdvocates ReferralAdvocate[]
+  referralRedemptions ReferralRedemption[]
 
   @@map("shop")
 }
@@ -397,4 +399,73 @@ model AiSummary {
   @@unique([shopId, productId])
   @@index([productId])
   @@map("ai_summary")
+}
+
+enum ReferralSource {
+  @@type("pg/text@1")
+  Onsite       = "onsite"
+  PostReview   = "post_review"
+  PostPurchase = "post_purchase"
+}
+
+enum ReferralRedemptionStatus {
+  @@type("pg/text@1")
+  Issued   = "issued"
+  Used     = "used"
+  Rewarded = "rewarded"
+  Blocked  = "blocked"
+  Expired  = "expired"
+}
+
+model ReferralAdvocate {
+  id                Uuid           @id @default(uuid())
+  shopId            Uuid
+  email             String
+  name              String?
+  code              String
+  source            ReferralSource @default(Onsite)
+  customerId        Uuid?
+  shopifyCustomerId String?
+  marketingConsent  Boolean        @default(false)
+  rewardCount       Int            @default(0)
+  lastRewardedAt    DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         temporal.updatedAt()
+
+  shop         Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  redemptions  ReferralRedemption[]
+
+  @@unique([shopId, email])
+  @@unique([shopId, code])
+  @@index([shopId])
+  @@map("referral_advocate")
+}
+
+model ReferralRedemption {
+  id                   Uuid                     @id @default(uuid())
+  shopId               Uuid
+  advocateId           Uuid
+  friendEmail          String?
+  friendCustomerId     String?
+  discountCode         String
+  shopifyDiscountId    String?
+  orderId              Uuid?
+  shopifyOrderId       String?
+  status               ReferralRedemptionStatus @default(Issued)
+  friendDiscountType   String
+  friendDiscountValue  Float
+  minimumPurchase      Float                    @default(0)
+  blockedReason        String?
+  createdAt            DateTime                 @default(now())
+  usedAt               DateTime?
+  rewardedAt           DateTime?
+  updatedAt            temporal.updatedAt()
+
+  shop     Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  advocate ReferralAdvocate @relation(fields: [advocateId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, discountCode])
+  @@index([shopId, status])
+  @@index([advocateId])
+  @@map("referral_redemption")
 }

@@ -2212,3 +2212,147 @@ body.or-review-modal-open {
     max-height: 148px;
   }
 }
+
+/* ── Referral widgets ─────────────────────────────────────────── */
+.or-referral {
+  position: relative;
+  z-index: 40;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  color: #18181b;
+}
+
+.or-referral__tab {
+  position: fixed;
+  right: 0;
+  top: 42%;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: right bottom;
+  border: 0;
+  background: #18181b;
+  color: #fafafa;
+  padding: 0.7rem 1.1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  z-index: 41;
+}
+
+.or-referral--popup .or-referral__tab,
+.or-referral--post-review .or-referral__tab,
+.or-referral--post-purchase .or-referral__tab {
+  position: static;
+  transform: none;
+  display: inline-flex;
+  margin: 0.5rem 0;
+}
+
+.or-referral__panel {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: min(360px, calc(100vw - 2rem));
+  background: linear-gradient(165deg, #fff 0%, #f4f4f5 100%);
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 18px 50px rgba(24, 24, 27, 0.16);
+  padding: 1.25rem 1.25rem 1.4rem;
+  z-index: 42;
+}
+
+.or-referral--post-purchase .or-referral__panel,
+.or-referral--post-review .or-referral__panel {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  box-shadow: none;
+}
+
+.or-referral__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.7rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #71717a;
+}
+
+.or-referral__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.or-referral__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.or-referral__copy {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #3f3f46;
+}
+
+.or-referral__form,
+.or-referral__result,
+.or-referral__friend {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.or-referral__input {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.or-referral__consent {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 0.82rem;
+  color: #52525b;
+}
+
+.or-referral__submit,
+.or-referral__share {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 0;
+  background: #18181b;
+  color: #fafafa;
+  padding: 0.75rem 1rem;
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.or-referral__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.or-referral__success {
+  margin: 0;
+  color: #166534;
+}
+
+.or-referral__error {
+  margin: 0;
+  color: #b91c1c;
+}

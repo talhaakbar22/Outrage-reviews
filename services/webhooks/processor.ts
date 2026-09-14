@@ -146,6 +146,42 @@ async function handleOrderPaid(shopId: string, payload: unknown) {
       });
     }
   }
+
+  if (order.discountCodes.length > 0) {
+    const priorAgg = await db.orm.public.Order.where({ shopId })
+      .where((row) => row.id.neq(orderRecord.id))
+      .where((row) => {
+        if (customerId) {
+          return row.customerId.eq(customerId);
+        }
+        if (order.email) {
+          return row.email.eq(order.email);
+        }
+        return row.id.eq(orderRecord.id);
+      })
+      .aggregate((agg) => ({ count: agg.count() }));
+
+    const priorOrders = Number(priorAgg?.count ?? 0);
+
+    const isNewCustomer =
+      order.customer?.ordersCount != null
+        ? order.customer.ordersCount <= 1
+        : priorOrders === 0;
+
+    const { attributeReferralOrder } = await import(
+      "@/services/referrals/engine"
+    );
+    await attributeReferralOrder({
+      shopId,
+      shopifyOrderId: order.shopifyOrderId,
+      orderId: orderRecord.id,
+      email: order.email,
+      shopifyCustomerId: order.customer?.shopifyCustomerId ?? null,
+      discountCodes: order.discountCodes,
+      isNewCustomer,
+      subtotal: order.subtotalPrice,
+    });
+  }
 }
 
 async function handleFulfillmentCreated(shopId: string, payload: unknown) {

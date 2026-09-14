@@ -47,12 +47,37 @@ export function parseOrderPaidPayload(payload: unknown) {
     shopifyOrderNumber: readString(order, "name"),
     email: readString(order, "email") ?? readString(order, "contact_email"),
     fulfillmentStatus: readString(order, "fulfillment_status"),
+    subtotalPrice: readNumber(order, "subtotal_price") ??
+      (typeof order.subtotal_price === "string"
+        ? Number(order.subtotal_price)
+        : null),
+    discountCodes: (() => {
+      const codes = new Set<string>();
+      const discountCodes = Array.isArray(order.discount_codes)
+        ? order.discount_codes
+        : [];
+      for (const row of discountCodes) {
+        const item = asRecord(row);
+        const code = item ? readString(item, "code") : null;
+        if (code) codes.add(code.toUpperCase());
+      }
+      const applications = Array.isArray(order.discount_applications)
+        ? order.discount_applications
+        : [];
+      for (const row of applications) {
+        const item = asRecord(row);
+        const code = item ? readString(item, "code") : null;
+        if (code) codes.add(code.toUpperCase());
+      }
+      return [...codes];
+    })(),
     customer: customer
       ? {
           shopifyCustomerId: shopifyId(customer.id),
           email: readString(customer, "email"),
           firstName: readString(customer, "first_name"),
           lastName: readString(customer, "last_name"),
+          ordersCount: readNumber(customer, "orders_count"),
         }
       : null,
     lineItems: lineItems

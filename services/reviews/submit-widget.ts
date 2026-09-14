@@ -209,6 +209,43 @@ export async function submitReviewFromWidget(input: SubmitWidgetReviewInput) {
       );
     });
 
+  let referral: {
+    active: boolean;
+    endpoint: string;
+    headline: string;
+    email: string;
+    productTitle: string;
+  } | null = null;
+
+  try {
+    const { getReferralSettings, formatFriendOffer, formatAdvocateOffer } =
+      await import("@/services/referrals/settings");
+    const referralSettings = await getReferralSettings(shop.id);
+    if (referralSettings.widgets.post_review.active && input.rating >= 4) {
+      const symbol =
+        (shop.currency || "GBP").toUpperCase() === "GBP"
+          ? "£"
+          : (shop.currency || "GBP").toUpperCase() === "EUR"
+            ? "€"
+            : (shop.currency || "GBP").toUpperCase() === "USD"
+              ? "$"
+              : `${(shop.currency || "GBP").toUpperCase()} `;
+      referral = {
+        active: true,
+        endpoint: "/apps/outrage-reviews/referrals",
+        headline: `Give ${formatFriendOffer(referralSettings, symbol)}${
+          referralSettings.offer.rewardAdvocates
+            ? `, Get ${formatAdvocateOffer(referralSettings, symbol)}`
+            : ""
+        }`,
+        email,
+        productTitle: product.title,
+      };
+    }
+  } catch (error) {
+    console.error("[referrals] post-review payload failed:", error);
+  }
+
   return {
     reviewId: review.id,
     status,
@@ -216,5 +253,6 @@ export async function submitReviewFromWidget(input: SubmitWidgetReviewInput) {
       status === "published"
         ? "Thank you! Your review is now live."
         : "Thank you! Your review has been submitted for approval.",
+    referral,
   };
 }
