@@ -9,11 +9,26 @@
   assign breakdown = null
 
   if rating_product
-    if rating_product.metafields.reviews.rating.value != blank
-      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    assign rating_mf = rating_product.metafields.reviews.rating
+    assign count_mf = rating_product.metafields.reviews.rating_count
+    if count_mf == blank
+      assign count_mf = rating_product.metafields.reviews.count
     endif
-    if rating_product.metafields.reviews.count.value != blank
-      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+    if rating_mf != blank
+      if rating_mf.value.rating != blank
+        assign rating_value = rating_mf.value.rating | plus: 0
+      elsif rating_mf.value.value != blank
+        assign rating_value = rating_mf.value.value | plus: 0
+      elsif rating_mf.value != blank
+        assign rating_value = rating_mf.value | plus: 0
+      endif
+    endif
+    if count_mf != blank
+      if count_mf.value != blank
+        assign review_count = count_mf.value | plus: 0
+      else
+        assign review_count = count_mf | plus: 0
+      endif
     endif
     if rating_product.metafields.reviews.rating_breakdown.value != blank
       assign breakdown = rating_product.metafields.reviews.rating_breakdown.value

@@ -108,42 +108,88 @@ export async function syncProductRatingMetafields(productId: string) {
 
   // Recalculate again at sync time so the job always writes the latest DB state.
   const ratings = await recalculateProductRatings(productId);
-  const productGid = `gid://shopify/Product/${product.shopifyProductId}`;
+
+  // Prefer the live Shopify catalog id (imports often store stale numeric ids).
+  let shopifyProductId = product.shopifyProductId;
+  let productGid = /^\d+$/.test(shopifyProductId)
+    ? `gid://shopify/Product/${shopifyProductId}`
+    : null;
+
+  if (productGid) {
+    const { fetchProductByShopifyId, fetchProductByHandle, shopifyGidToId } =
+      await import("@/lib/shopify/products");
+    const byId = await fetchProductByShopifyId(session, shopifyProductId);
+    if (!byId && product.handle) {
+      const byHandle = await fetchProductByHandle(session, product.handle);
+      if (byHandle?.id) {
+        shopifyProductId = shopifyGidToId(byHandle.id);
+        productGid = byHandle.id;
+        if (shopifyProductId !== product.shopifyProductId) {
+          await getDb().orm.public.Product.where({ id: productId }).update({
+            shopifyProductId,
+            title: byHandle.title,
+            handle: byHandle.handle,
+          });
+        }
+      }
+    } else if (byId?.id) {
+      productGid = byId.id;
+      shopifyProductId = shopifyGidToId(byId.id);
+    }
+  } else if (product.handle) {
+    const { fetchProductByHandle, shopifyGidToId } = await import(
+      "@/lib/shopify/products"
+    );
+    const byHandle = await fetchProductByHandle(session, product.handle);
+    if (byHandle?.id) {
+      shopifyProductId = shopifyGidToId(byHandle.id);
+      productGid = byHandle.id;
+      await getDb().orm.public.Product.where({ id: productId }).update({
+        shopifyProductId,
+        title: byHandle.title,
+        handle: byHandle.handle,
+      });
+    }
+  }
+
+  if (!productGid || !/^\d+$/.test(shopifyProductId)) {
+    throw new Error(
+      `No live Shopify product for ${product.handle || productId}`,
+    );
+  }
 
   let customerSay: Record<string, unknown> | null = null;
-  if (/^\d+$/.test(product.shopifyProductId)) {
-    try {
-      const { buildCustomerSayPayload } = await import(
-        "@/services/reviews/customer-summary"
-      );
-      const payload = await buildCustomerSayPayload({
-        shopId: product.shopId,
-        shopifyProductId: product.shopifyProductId,
-        includeReviews: true,
-        reviewsOffset: 0,
-        reviewsLimit: 10,
-        skipSummary: false,
-      });
-      customerSay = {
-        rating: payload.rating,
-        count: payload.count,
-        verifiedCount: payload.verifiedCount,
-        summaryText: payload.summaryText,
-        summarySourceCount: payload.summarySourceCount,
-        summaryGeneratedAt: payload.summaryGeneratedAt,
-        summaryMonthLabel: payload.summaryMonthLabel,
-        highlights: payload.highlights,
-        snippets: payload.snippets,
-        reviews: payload.reviews,
-        reviewsTotal: payload.reviewsTotal,
-        hasMoreReviews: payload.hasMoreReviews,
-      };
-    } catch (error) {
-      console.error(
-        "[ratings] failed to build customer-say metafield snapshot:",
-        error,
-      );
-    }
+  try {
+    const { buildCustomerSayPayload } = await import(
+      "@/services/reviews/customer-summary"
+    );
+    const payload = await buildCustomerSayPayload({
+      shopId: product.shopId,
+      shopifyProductId,
+      includeReviews: true,
+      reviewsOffset: 0,
+      reviewsLimit: 10,
+      skipSummary: false,
+    });
+    customerSay = {
+      rating: payload.rating,
+      count: payload.count,
+      verifiedCount: payload.verifiedCount,
+      summaryText: payload.summaryText,
+      summarySourceCount: payload.summarySourceCount,
+      summaryGeneratedAt: payload.summaryGeneratedAt,
+      summaryMonthLabel: payload.summaryMonthLabel,
+      highlights: payload.highlights,
+      snippets: payload.snippets,
+      reviews: payload.reviews,
+      reviewsTotal: payload.reviewsTotal,
+      hasMoreReviews: payload.hasMoreReviews,
+    };
+  } catch (error) {
+    console.error(
+      "[ratings] failed to build customer-say metafield snapshot:",
+      error,
+    );
   }
 
   await updateProductRatingMetafields(session, productGid, {

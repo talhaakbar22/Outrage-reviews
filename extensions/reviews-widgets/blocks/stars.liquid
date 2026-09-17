@@ -15,7 +15,10 @@
 
   if rating_product
     assign rating_mf = rating_product.metafields.reviews.rating
-    assign count_mf = rating_product.metafields.reviews.count
+    assign count_mf = rating_product.metafields.reviews.rating_count
+    if count_mf == blank
+      assign count_mf = rating_product.metafields.reviews.count
+    endif
 
     if rating_mf != blank
       if rating_mf.value.rating != blank

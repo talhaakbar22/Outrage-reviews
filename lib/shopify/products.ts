@@ -13,6 +13,7 @@ export type ShopifyProductNode = {
   featuredImage: { url: string } | null;
   averageRating: { value: string } | null;
   reviewCount: { value: string } | null;
+  reviewCountLegacy: { value: string } | null;
 };
 
 export type ProductsPage = {
@@ -46,6 +47,12 @@ const PRODUCTS_QUERY = `#graphql
         }
         reviewCount: metafield(
           namespace: "${RATING_METAFIELD_NAMESPACE}"
+          key: "${RATING_METAFIELD_KEYS.ratingCount}"
+        ) {
+          value
+        }
+        reviewCountLegacy: metafield(
+          namespace: "${RATING_METAFIELD_NAMESPACE}"
           key: "${RATING_METAFIELD_KEYS.count}"
         ) {
           value
@@ -73,6 +80,12 @@ const PRODUCT_BY_ID_QUERY = `#graphql
       }
       reviewCount: metafield(
         namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.ratingCount}"
+      ) {
+        value
+      }
+      reviewCountLegacy: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
         key: "${RATING_METAFIELD_KEYS.count}"
       ) {
         value
@@ -99,6 +112,52 @@ export async function fetchProductByShopifyId(
   });
 
   return response.data?.product ?? null;
+}
+
+const PRODUCT_BY_HANDLE_QUERY = `#graphql
+  query ProductByHandle($handle: String!) {
+    productByHandle(handle: $handle) {
+      id
+      title
+      handle
+      status
+      featuredImage {
+        url
+      }
+      averageRating: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.rating}"
+      ) {
+        value
+      }
+      reviewCount: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.ratingCount}"
+      ) {
+        value
+      }
+      reviewCountLegacy: metafield(
+        namespace: "${RATING_METAFIELD_NAMESPACE}"
+        key: "${RATING_METAFIELD_KEYS.count}"
+      ) {
+        value
+      }
+    }
+  }
+`;
+
+export async function fetchProductByHandle(
+  session: Session,
+  handle: string,
+): Promise<ShopifyProductNode | null> {
+  const client = createGraphqlClient(session);
+  const response = await client.request<{
+    productByHandle: ShopifyProductNode | null;
+  }>(PRODUCT_BY_HANDLE_QUERY, {
+    variables: { handle },
+  });
+
+  return response.data?.productByHandle ?? null;
 }
 
 export async function fetchProductsPage(
@@ -244,13 +303,23 @@ export function shopifyGidToId(gid: string) {
 
 export function parseProductRatings(product: ShopifyProductNode) {
   const avgRaw = product.averageRating?.value;
-  const countRaw = product.reviewCount?.value;
+  let avgRating: number | null = null;
 
-  const avgRating =
-    avgRaw !== undefined && avgRaw !== null && avgRaw !== ""
-      ? Number.parseFloat(avgRaw)
-      : null;
+  if (avgRaw !== undefined && avgRaw !== null && avgRaw !== "") {
+    try {
+      const parsed = JSON.parse(avgRaw) as { value?: string | number };
+      if (parsed && typeof parsed === "object" && parsed.value != null) {
+        avgRating = Number.parseFloat(String(parsed.value));
+      } else {
+        avgRating = Number.parseFloat(avgRaw);
+      }
+    } catch {
+      avgRating = Number.parseFloat(avgRaw);
+    }
+  }
 
+  const countRaw =
+    product.reviewCount?.value ?? product.reviewCountLegacy?.value;
   const reviewCount =
     countRaw !== undefined && countRaw !== null && countRaw !== ""
       ? Number.parseInt(countRaw, 10)
