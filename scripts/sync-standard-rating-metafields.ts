@@ -23,10 +23,6 @@ async function main() {
 
   console.log(`Syncing ${products.length} products…`);
   for (const product of products) {
-    if (!/^\d+$/.test(product.shopifyProductId)) {
-      console.log("skip", product.shopifyProductId, product.handle);
-      continue;
-    }
     try {
       const stats = await syncProductRatingMetafields(product.id);
       console.log(

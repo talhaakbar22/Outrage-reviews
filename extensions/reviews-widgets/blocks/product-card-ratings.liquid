@@ -1,6 +1,7 @@
 {% comment %}
-  App embed: injects DB-backed star rating + review count under product titles
-  on every product card (featured, collection, search, related, cart, etc.).
+  App embed (Loox-style): injects star rating + review count under product titles
+  site-wide — collections, featured grids, search, predictive search, related
+  products, cart page, and cart drawer. Enable once under Theme settings → App embeds.
 {% endcomment %}
 
 {% liquid
@@ -31,12 +32,12 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Shows each product’s rating and review count from Outrage Reviews under the product name — on featured collections, collection pages, search, related products, and cart line items. Enable this App embed once for the whole theme."
+      "content": "Loox-style stars under every product name: collections, search, predictive search, related products, cart, and cart drawer. Turn this App embed ON once for the whole theme, then Save."
     },
     {
       "type": "checkbox",
       "id": "show_count",
-      "label": "Show review count",
+      "label": "Show rating number and review count",
       "default": true
     },
     {
@@ -65,7 +66,7 @@
       "type": "text",
       "id": "api_base_url",
       "label": "API base URL (optional)",
-      "info": "Leave blank to use the app proxy."
+      "info": "Leave blank to use the app proxy (/apps/outrage-reviews/...)."
     }
   ]
 }

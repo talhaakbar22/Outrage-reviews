@@ -51,8 +51,10 @@ export function WidgetsWorkspace({
             yarn shopify:deploy
           </code>
           . <strong>What customers say</strong> is a product-page section.{" "}
-          <strong>Stars under product names</strong> use an{" "}
-          <strong>App embed</strong> named Product card ratings.
+          <strong>Stars under product names everywhere</strong> (collections,
+          search, cart) require the{" "}
+          <strong>App embed</strong> named Product card ratings — same idea as
+          Loox.
         </p>
       </div>
 
@@ -67,23 +69,27 @@ export function WidgetsWorkspace({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <article className="overflow-hidden rounded-2xl border border-zinc-950 bg-white ring-2 ring-zinc-950 dark:border-zinc-50 dark:bg-zinc-950 dark:ring-zinc-50">
           <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="space-y-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
               <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
                 Product name
               </p>
-              <p className="text-xs text-amber-600">★★★★☆ 4.2 · 12 reviews</p>
+              <p className="text-xs text-amber-600">★★★★☆ 4.2 (12)</p>
               <p className="text-sm text-zinc-600">$49.00</p>
             </div>
           </div>
           <div className="space-y-3 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
+              Required for listings · like Loox
+            </p>
             <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
               Product card ratings
             </h2>
             <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              Shows stars + rating + review count under each product title on
-              Featured products, collections, search, and Related products.
+              Shows stars + rating under every product name on collections,
+              search, predictive search, related products, cart, and cart
+              drawer — so shoppers see social proof before the product page.
             </p>
             <a
               href={productCardRatingsEmbedUrl}
@@ -91,13 +97,13 @@ export function WidgetsWorkspace({
               rel="noreferrer"
               className="btn-primary inline-flex gap-2"
             >
-              Enable under product titles
+              Enable site-wide (App embed)
               <span aria-hidden>↗</span>
             </a>
           </div>
         </article>
 
-        <article className="overflow-hidden rounded-2xl border border-zinc-950 bg-white ring-2 ring-zinc-950 dark:border-zinc-50 dark:bg-zinc-950 dark:ring-zinc-50">
+        <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
           <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
               <div className="space-y-2">

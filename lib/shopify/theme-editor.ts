@@ -96,15 +96,19 @@ export const PRODUCT_CARD_RATINGS_STEPS = [
     body: "Run `yarn shopify:dev` or `yarn shopify:deploy` so “Product card ratings” appears under App embeds.",
   },
   {
-    title: "Open App embeds (not Apps sections)",
-    body: "Theme editor → click the nested dots / Theme settings → App embeds. Do not look under Related products → Add block.",
+    title: "Open App embeds (not product sections)",
+    body: "Theme editor → Theme settings (nested dots) → App embeds. Do not look under Product information → Add block.",
   },
   {
     title: "Enable Product card ratings",
-    body: "Find Outrage Reviews → Product card ratings → turn the toggle ON → Save.",
+    body: "Find Outrage Reviews → Product card ratings → turn the toggle ON → Save. This is the Loox-style site-wide embed.",
   },
   {
-    title: "Confirm products have reviews",
-    body: "Stars only appear for products that already have approved/imported reviews in Outrage Reviews (rating + count).",
+    title: "Check collection, search, and cart",
+    body: "Stars appear under product names on collections, search results, predictive search, related products, cart page, and cart drawer — without opening the product page.",
+  },
+  {
+    title: "Keep “Show product rating” on (optional)",
+    body: "In Product grid settings you can also leave Shopify’s Show product rating ON. Outrage now writes the standard rating metafields Dawn uses.",
   },
 ] as const;
