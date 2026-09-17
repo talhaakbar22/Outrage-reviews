@@ -3,7 +3,7 @@
 # Local dev:  yarn shopify:dev  (CLI tunnel overrides localhost URLs)
 # Deploy:     yarn shopify:deploy  (requires SHOPIFY_APP_URL=https://… in .env)
 
-client_id = "a8568adbcd8de4fde3d72f2a77cd5172"
+client_id = "ec07942824b8f47726108667643974e8"
 name = "Outrage Reviews"
 application_url = "https://hsxperts.co"
 embedded = true
