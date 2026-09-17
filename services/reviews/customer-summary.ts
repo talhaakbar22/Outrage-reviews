@@ -14,7 +14,6 @@ import {
   APPROVED_REVIEW_STATUSES,
   fallbackSummaryFromReviews,
   fingerprintPublishedReviews,
-  generateAndStoreProductSummary,
   loadCachedAiSummary,
 } from "@/services/reviews/ai-summary";
 
@@ -226,14 +225,18 @@ export async function buildCustomerSayPayload(input: {
   let summaryIsReady = Boolean(cached?.isCurrent);
 
   if (publishedCount > 0 && !cached?.isCurrent && !input.skipSummary) {
-    const generate = () =>
-      generateAndStoreProductSummary({
+    const generate = async () => {
+      const { generateAndStoreProductSummary } = await import(
+        "@/services/reviews/ai-summary"
+      );
+      return generateAndStoreProductSummary({
         shopId: input.shopId,
         productId: product.id,
         productTitle: product.title,
         avgRating: product.avgRating,
         reviews: sourceReviews,
       });
+    };
 
     if (input.waitForSummary) {
       try {

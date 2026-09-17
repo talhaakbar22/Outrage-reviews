@@ -10,7 +10,7 @@ import {
   type ReferralEmailKind,
   type ReferralSettings,
   type ReferralWidgetId,
-} from "@/services/referrals/settings";
+} from "@/services/referrals/settings-shared";
 
 type TabId = "offer" | "widgets" | "emails" | "general";
 

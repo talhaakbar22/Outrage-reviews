@@ -3085,6 +3085,13 @@
   dependencies:
     undici-types "~6.21.0"
 
+"@types/nodemailer@^8.0.1":
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/@types/nodemailer/-/nodemailer-8.0.1.tgz#4ef2b4e62c819225a0b8a6384bf750c0c664d465"
+  integrity sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==
+  dependencies:
+    "@types/node" "*"
+
 "@types/pg@8.20.4":
   version "8.20.4"
   resolved "https://registry.npmjs.org/@types/pg/-/pg-8.20.4.tgz"
@@ -7573,6 +7580,11 @@ node-releases@^2.0.53:
   version "2.0.54"
   resolved "https://registry.npmjs.org/node-releases/-/node-releases-2.0.54.tgz"
   integrity sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==
+
+nodemailer@^10.0.3:
+  version "10.0.3"
+  resolved "https://registry.yarnpkg.com/nodemailer/-/nodemailer-10.0.3.tgz#f1fa53fa12f6effe1c2c3c89ef7fb3410e3b6027"
+  integrity sha512-h5c8ypcMoOIh44bIcVROvTDbjRdOJX8AXTkxMht2C92HlSjkG+/8kjoqmNPypfjQaVNaUHWyZ3tqs5I3K91F3g==
 
 nopt@^8.0.0:
   version "8.1.0"

@@ -6,7 +6,6 @@ import {
   isPlaceholderCustomerSummary,
   type SummaryHighlight,
 } from "@/lib/customer-say";
-import { generateCursorReviewSummary } from "@/lib/ai/cursor-summary";
 
 const SOURCE_LIMIT = 80;
 const BODY_LIMIT = 420;
@@ -223,6 +222,9 @@ export async function generateAndStoreProductSummary(input: {
     }
 
     try {
+      const { generateCursorReviewSummary } = await import(
+        "@/lib/ai/cursor-summary"
+      );
       const generated = await generateCursorReviewSummary({
         productTitle: input.productTitle || "this product",
         reviews: reviews.map((review) => ({

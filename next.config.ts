@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@cursor/sdk"],
+  serverExternalPackages: [
+    "@cursor/sdk",
+    "@connectrpc/connect",
+    "@connectrpc/connect-node",
+    "undici",
+  ],
   allowedDevOrigins: [
     "16.171.140.220",
     // ngrok tunnel (update when the subdomain changes):
