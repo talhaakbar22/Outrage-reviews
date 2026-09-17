@@ -1,6 +1,8 @@
 import {
   buildProductTemplateEditorLink,
   buildThemeBlockDeepLink,
+  buildThemeEmbedDeepLink,
+  PRODUCT_CARD_RATINGS_STEPS,
   THEME_INSTALL_STEPS,
 } from "@/lib/shopify/theme-editor";
 import { WidgetsCustomizePanel } from "@/components/dashboard/widgets-customize-panel";
@@ -25,6 +27,12 @@ export function WidgetsWorkspace({
     block: "customer-say",
     target: "newAppsSection",
   });
+  const productCardRatingsEmbedUrl = buildThemeEmbedDeepLink({
+    shopDomain,
+    shopifyApiKey,
+    embed: "product-card-ratings",
+    template: "index",
+  });
   const productTemplateUrl = buildProductTemplateEditorLink(shopDomain);
 
   return (
@@ -34,20 +42,17 @@ export function WidgetsWorkspace({
           Before adding widgets to your theme
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900/90 dark:text-amber-100/90">
-          Outrage Reviews widgets are <strong>theme blocks</strong> on the product
-          page — not <strong>App embeds</strong>. If &quot;customer-say not added&quot;
-          appears, the theme extension has not been pushed to Shopify yet.{" "}
-          <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">yarn dev</code>{" "}
-          and ngrok alone are not enough — run Shopify CLI to upload blocks.
-        </p>
-        <code className="mt-3 block rounded-lg bg-white/80 px-3 py-2 text-xs text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
-          yarn shopify:dev
-        </code>
-        <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/80">
-          Using your own ngrok tunnel:{" "}
+          Deploy the theme extension with{" "}
           <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">
-            shopify app dev --tunnel-url=https://YOUR-SUBDOMAIN.ngrok-free.app:443
+            yarn shopify:dev
+          </code>{" "}
+          or{" "}
+          <code className="rounded bg-white/70 px-1 dark:bg-zinc-950">
+            yarn shopify:deploy
           </code>
+          . <strong>What customers say</strong> is a product-page section.{" "}
+          <strong>Stars under product names</strong> use an{" "}
+          <strong>App embed</strong> named Product card ratings.
         </p>
       </div>
 
@@ -56,12 +61,42 @@ export function WidgetsWorkspace({
           Widgets
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Add review widgets to your storefront theme. Preview how they look before
-          publishing.
+          Add review widgets to your storefront theme. Preview how they look
+          before publishing.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="space-y-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
+              <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                Product name
+              </p>
+              <p className="text-xs text-amber-600">★★★★☆ 4.2 · 12 reviews</p>
+              <p className="text-sm text-zinc-600">$49.00</p>
+            </div>
+          </div>
+          <div className="space-y-3 p-5">
+            <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+              Product card ratings
+            </h2>
+            <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              Shows stars + rating + review count under each product title on
+              Featured products, collections, search, and Related products.
+            </p>
+            <a
+              href={productCardRatingsEmbedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary inline-flex gap-2"
+            >
+              Enable under product titles
+              <span aria-hidden>↗</span>
+            </a>
+          </div>
+        </article>
+
         <article className="overflow-hidden rounded-2xl border border-zinc-950 bg-white ring-2 ring-zinc-950 dark:border-zinc-50 dark:bg-zinc-950 dark:ring-zinc-50">
           <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
@@ -76,19 +111,9 @@ export function WidgetsWorkspace({
                   What customers say
                 </p>
                 <p className="line-clamp-3 text-[11px] leading-5 text-zinc-600 dark:text-zinc-400">
-                  Reviewers repeatedly call out quality, comfort, and fast delivery
-                  when describing this product.
+                  Reviewers repeatedly call out quality, comfort, and fast
+                  delivery when describing this product.
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {["Quality 24", "Gift 12", "Delivery 8"].map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -98,8 +123,8 @@ export function WidgetsWorkspace({
               What customers say
             </h2>
             <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              AI summary of approved reviews, including short 1–2 word comments, with
-              theme tags and an expandable review list.
+              AI summary of approved reviews on the product page — not the stars
+              under product card titles.
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <a href="#customize-customer-say" className="btn-secondary">
@@ -119,6 +144,35 @@ export function WidgetsWorkspace({
         </article>
       </div>
 
+      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+            Stars under product names — step by step
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            This is separate from “What customers say”. Use App embeds.
+          </p>
+        </div>
+        <ol className="list-decimal space-y-3 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+          {PRODUCT_CARD_RATINGS_STEPS.map((step) => (
+            <li key={step.title}>
+              <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                {step.title}.{" "}
+              </span>
+              {step.body}
+            </li>
+          ))}
+        </ol>
+        <a
+          href={productCardRatingsEmbedUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-primary inline-flex"
+        >
+          Open App embeds → Product card ratings
+        </a>
+      </section>
+
       <section
         id="customize-customer-say"
         className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
@@ -128,8 +182,8 @@ export function WidgetsWorkspace({
             Customize: What customers say
           </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Preview ratings and reviews for a product from your store. Summary text
-            is shown on the storefront widget only.
+            Preview ratings and reviews for a product from your store. Summary
+            text is shown on the storefront widget only.
           </p>
         </div>
 
@@ -137,7 +191,7 @@ export function WidgetsWorkspace({
 
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
           <p className="font-medium text-zinc-950 dark:text-zinc-50">
-            How to add this widget to your theme
+            How to add “What customers say” to your theme
           </p>
           <ol className="mt-3 list-decimal space-y-3 pl-5">
             {THEME_INSTALL_STEPS.map((step) => (
@@ -169,29 +223,6 @@ export function WidgetsWorkspace({
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-            Manual path: Theme editor → Product page → <strong>Add section</strong> →{" "}
-            <strong>Apps</strong> → <strong>What customers say</strong>. Drag the
-            section where you want it (usually below product details).
-          </p>
-          <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
-            Seeing two widgets? You added it twice — once as a <strong>block</strong>{" "}
-            inside Product information and once as a <strong>section</strong>. Delete
-            the block inside Product information and keep only the full-width section
-            at the bottom.
-          </p>
-          <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
-            If you see a JSON/ngrok error, open the widget settings and clear{" "}
-            <strong>Direct app URL</strong> — leave it blank so data loads via app
-            proxy.
-          </p>
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-            Data loads from{" "}
-            <code className="rounded bg-white px-1 py-0.5 dark:bg-zinc-950">
-              /apps/outrage-reviews/customer-say
-            </code>
-            . “Read all reviews” paginates through published reviews.
-          </p>
           {host ? (
             <p className="mt-2 text-xs text-zinc-500">
               Shopify admin session detected — deep links open in a new tab.

@@ -4,6 +4,11 @@ export type ThemeBlockId =
   | "review-summary"
   | "stars";
 
+export type ThemeEmbedId =
+  | "product-card-ratings"
+  | "referral-popup"
+  | "referral-sidebar";
+
 /** From extensions/reviews-widgets/shopify.extension.toml — used if api_key deep links fail. */
 export const REVIEWS_WIDGETS_EXTENSION_UID =
   "60b6195a-6d86-ba05-cb34-7245edc7b42d847538e8";
@@ -39,6 +44,28 @@ export function buildThemeBlockDeepLink(input: {
   return `https://admin.shopify.com/store/${storeHandle}/themes/current/editor?${params.toString()}`;
 }
 
+/**
+ * Deep link that opens App embeds and activates an Outrage Reviews embed.
+ * Use this for product-card star ratings under product titles.
+ */
+export function buildThemeEmbedDeepLink(input: {
+  shopDomain: string;
+  shopifyApiKey: string;
+  embed: ThemeEmbedId;
+  template?: string;
+}) {
+  const storeHandle = shopHandleFromDomain(input.shopDomain);
+  const params = new URLSearchParams({
+    context: "apps",
+    activateAppId: `${input.shopifyApiKey}/${input.embed}`,
+  });
+  if (input.template) {
+    params.set("template", input.template);
+  }
+
+  return `https://admin.shopify.com/store/${storeHandle}/themes/current/editor?${params.toString()}`;
+}
+
 export function buildProductTemplateEditorLink(shopDomain: string) {
   const storeHandle = shopHandleFromDomain(shopDomain);
   return `https://admin.shopify.com/store/${storeHandle}/themes/current/editor?template=product`;
@@ -47,18 +74,37 @@ export function buildProductTemplateEditorLink(shopDomain: string) {
 export const THEME_INSTALL_STEPS = [
   {
     title: "Push the theme extension to Shopify",
-    body: "Running only `yarn dev` + ngrok does not upload theme blocks. From the project root run `yarn shopify:dev` (recommended) or `shopify app deploy`. With your own ngrok tunnel: `shopify app dev --tunnel-url=https://YOUR-SUBDOMAIN.ngrok-free.app:443` while `yarn dev` runs elsewhere.",
+    body: "Running only `yarn dev` + ngrok does not upload theme blocks. From the project root run `yarn shopify:dev` (recommended) or `shopify app deploy`.",
   },
   {
     title: "Open the product page template",
-    body: "In the theme editor, switch the preview to Products → Default product (pick a product if prompted). Do not use the “App embeds” tab — our widgets are theme blocks, not embeds.",
+    body: "In the theme editor, switch the preview to Products → Default product (pick a product if prompted).",
   },
   {
     title: "Add as its own section",
-    body: "In the theme editor, click Add section (not Add block) → Apps → What customers say. This places the widget in a full-width section below the product. Or use “Add to theme” below for a deep link.",
+    body: "Click Add section (not Add block) → Apps → What customers say. Place it below the product details.",
   },
   {
     title: "Save and publish",
     body: "Save the theme. The widget loads review summaries from `/apps/outrage-reviews/customer-say` via the app proxy.",
+  },
+] as const;
+
+export const PRODUCT_CARD_RATINGS_STEPS = [
+  {
+    title: "Deploy the theme extension",
+    body: "Run `yarn shopify:dev` or `yarn shopify:deploy` so “Product card ratings” appears under App embeds.",
+  },
+  {
+    title: "Open App embeds (not Apps sections)",
+    body: "Theme editor → click the nested dots / Theme settings → App embeds. Do not look under Related products → Add block.",
+  },
+  {
+    title: "Enable Product card ratings",
+    body: "Find Outrage Reviews → Product card ratings → turn the toggle ON → Save.",
+  },
+  {
+    title: "Confirm products have reviews",
+    body: "Stars only appear for products that already have approved/imported reviews in Outrage Reviews (rating + count).",
   },
 ] as const;
