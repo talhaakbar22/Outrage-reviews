@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/prisma";
 import { getShopByDomain } from "@/services/storefront/reviews";
+import { APPROVED_REVIEW_STATUSES } from "@/services/reviews/ai-summary";
 
 export type ProductCardRating = {
   shopifyProductId: string;
@@ -17,7 +18,7 @@ function normalizeIds(values: string[]) {
         .map((value) => value.replace(/\D/g, "") || value)
         .filter(Boolean),
     ),
-  ].slice(0, 100);
+  ].slice(0, 120);
 }
 
 function normalizeHandles(values: string[]) {
@@ -29,9 +30,40 @@ function normalizeHandles(values: string[]) {
         .map((value) => value.replace(/^\/products\//, "").split(/[?#]/)[0]!)
         .filter(Boolean),
     ),
-  ].slice(0, 100);
+  ].slice(0, 120);
 }
 
+async function liveRatingsForProductIds(
+  productIds: string[],
+): Promise<Map<string, { avgRating: number; reviewCount: number }>> {
+  const db = getDb();
+  const map = new Map<string, { avgRating: number; reviewCount: number }>();
+  if (productIds.length === 0) return map;
+
+  await Promise.all(
+    productIds.map(async (productId) => {
+      const aggregate = await db.orm.public.Review.where({ productId })
+        .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
+        .aggregate((agg) => ({
+          reviewCount: agg.count(),
+          averageRating: agg.avg("rating"),
+        }));
+      const reviewCount = Number(aggregate?.reviewCount ?? 0);
+      if (reviewCount <= 0) return;
+      map.set(productId, {
+        reviewCount,
+        avgRating: Number(aggregate?.averageRating ?? 0),
+      });
+    }),
+  );
+
+  return map;
+}
+
+/**
+ * Batch ratings for storefront product cards.
+ * Always derives counts from approved reviews in the DB (not only cached product columns).
+ */
 export async function listProductCardRatings(input: {
   shopDomain: string;
   productIds?: string[];
@@ -70,12 +102,49 @@ export async function listProductCardRatings(input: {
     }
   }
 
+  if (products.length === 0) {
+    return [];
+  }
+
+  const live = await liveRatingsForProductIds(products.map((row) => row.id));
+
+  // Persist corrected caches when stale so dashboard/metafields stay in sync.
+  await Promise.all(
+    products.map(async (product) => {
+      const stats = live.get(product.id);
+      if (!stats) {
+        if ((product.reviewCount ?? 0) > 0 || product.avgRating != null) {
+          await db.orm.public.Product.where({ id: product.id }).update({
+            avgRating: null,
+            reviewCount: 0,
+          });
+        }
+        return;
+      }
+      const cachedCount = Number(product.reviewCount ?? 0);
+      const cachedAvg = Number(product.avgRating ?? 0);
+      if (
+        cachedCount !== stats.reviewCount ||
+        Math.abs(cachedAvg - stats.avgRating) > 0.01
+      ) {
+        await db.orm.public.Product.where({ id: product.id }).update({
+          avgRating: stats.avgRating,
+          reviewCount: stats.reviewCount,
+        });
+      }
+    }),
+  );
+
   return products
-    .filter((row) => (row.reviewCount ?? 0) > 0 && row.avgRating != null)
-    .map((row) => ({
-      shopifyProductId: row.shopifyProductId,
-      handle: row.handle,
-      avgRating: Number(row.avgRating ?? 0),
-      reviewCount: Number(row.reviewCount ?? 0),
-    }));
+    .map((row) => {
+      const stats = live.get(row.id);
+      if (!stats || stats.reviewCount <= 0) return null;
+      return {
+        shopifyProductId: row.shopifyProductId,
+        handle: row.handle,
+        avgRating: stats.avgRating,
+        reviewCount: stats.reviewCount,
+      } satisfies ProductCardRating;
+    })
+    .filter((row): row is ProductCardRating => Boolean(row));
 }

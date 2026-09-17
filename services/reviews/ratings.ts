@@ -3,6 +3,7 @@ import { enqueueAiSummary, enqueueProductRatingSync } from "@/lib/queue";
 import { loadOfflineSessionByShopId } from "@/services/shop/service";
 import { getProductById } from "@/services/products/repository";
 import { updateProductRatingMetafields } from "@/lib/shopify/metafields";
+import { APPROVED_REVIEW_STATUSES } from "@/services/reviews/ai-summary";
 
 export type RatingBreakdown = {
   "1": number;
@@ -34,30 +35,33 @@ export async function recalculateProductRatings(
   }
 
   const [aggregate, byRating] = await Promise.all([
-    db.orm.public.Review.where({
-      productId,
-      status: "published",
-    }).aggregate((agg) => ({
-      reviewCount: agg.count(),
-      averageRating: agg.avg("rating"),
-    })),
+    db.orm.public.Review.where({ productId })
+      .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
+      .aggregate((agg) => ({
+        reviewCount: agg.count(),
+        averageRating: agg.avg("rating"),
+      })),
     Promise.all(
       ([1, 2, 3, 4, 5] as const).map(async (rating) => {
         const result = await db.orm.public.Review.where({
           productId,
-          status: "published",
           rating,
-        }).aggregate((agg) => ({ count: agg.count() }));
+        })
+          .where((review) => review.status.in([...APPROVED_REVIEW_STATUSES]))
+          .aggregate((agg) => ({ count: agg.count() }));
         return { rating, count: result?.count ?? 0 };
       }),
     ),
   ]);
 
-  const reviewCount = aggregate?.reviewCount ?? 0;
-  const averageRating = reviewCount > 0 ? Number(aggregate?.averageRating ?? 0) : 0;
+  const reviewCount = Number(aggregate?.reviewCount ?? 0);
+  const averageRating =
+    reviewCount > 0 ? Number(aggregate?.averageRating ?? 0) : 0;
   const ratingBreakdown = emptyBreakdown();
   for (const item of byRating) {
-    ratingBreakdown[String(item.rating) as keyof RatingBreakdown] = item.count;
+    ratingBreakdown[String(item.rating) as keyof RatingBreakdown] = Number(
+      item.count ?? 0,
+    );
   }
 
   await db.orm.public.Product.where({ id: productId }).update({

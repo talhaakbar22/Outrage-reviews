@@ -3,6 +3,35 @@
 
   var ATTR_BOUND = "data-or-card-rating-bound";
   var ATTR_INJECTED = "data-or-card-rating";
+  var CARD_SELECTORS = [
+    ".card-wrapper",
+    ".product-card-wrapper",
+    ".card",
+    ".product-card",
+    ".grid__item",
+    ".product-grid-item",
+    ".collection-product-card",
+    ".cart-item",
+    ".cart__item",
+    "[data-product-id]",
+    "li",
+    "article",
+    "tr",
+  ].join(", ");
+
+  var TITLE_SELECTORS = [
+    ".card__heading a[href*='/products/']",
+    ".card-information a[href*='/products/']",
+    ".product-card-title a[href*='/products/']",
+    ".product-card__title a[href*='/products/']",
+    ".cart-item__name",
+    ".cart__item-name",
+    "h2 a[href*='/products/']",
+    "h3 a[href*='/products/']",
+    "h4 a[href*='/products/']",
+    "a.full-unstyled-link[href*='/products/']",
+    "a[href*='/products/']",
+  ].join(", ");
 
   function escapeHtml(value) {
     return String(value || "")
@@ -61,9 +90,8 @@
     }
 
     var countLabel =
-      item.reviewCount === 1
-        ? "1 review"
-        : item.reviewCount + " reviews";
+      item.reviewCount === 1 ? "1 review" : item.reviewCount + " reviews";
+
     return (
       '<div class="or-stars or-stars--card" ' +
       ATTR_INJECTED +
@@ -95,50 +123,88 @@
     }
   }
 
+  function readProductId(node) {
+    if (!node) return null;
+    var raw =
+      node.getAttribute("data-product-id") ||
+      node.getAttribute("data-productid") ||
+      node.getAttribute("data-id") ||
+      null;
+    if (!raw && node.dataset) {
+      raw = node.dataset.productId || node.dataset.productid || null;
+    }
+    if (!raw) return null;
+    var digits = String(raw).replace(/\D/g, "");
+    return digits || null;
+  }
+
   function findProductCards(root) {
-    var cards = [];
-    var seen = new Set();
+    var scope = root || document;
+    var byKey = new Map();
 
-    root.querySelectorAll("a[href*='/products/']").forEach(function (link) {
+    scope.querySelectorAll("a[href*='/products/']").forEach(function (link) {
       var handle = extractHandle(link.getAttribute("href"));
-      if (!handle || seen.has(link)) return;
+      if (!handle) return;
 
-      var card =
-        link.closest(
-          ".card-wrapper, .card, .product-card, .grid__item, .product-grid-item, li, article",
-        ) || link.parentElement;
-      if (!card || card.getAttribute(ATTR_BOUND) === "true") return;
+      var card = link.closest(CARD_SELECTORS) || link.parentElement;
+      if (!card) return;
       if (card.querySelector("[" + ATTR_INJECTED + "]")) {
         card.setAttribute(ATTR_BOUND, "true");
         return;
       }
 
-      // Prefer heading/title anchors for placement.
+      var key = card;
+      var existing = byKey.get(key);
       var title =
-        card.querySelector(
-          ".card__heading a[href*='/products/'], .card-information__text a[href*='/products/'], .product-card-title, .product__title a, h2 a[href*='/products/'], h3 a[href*='/products/'], a.full-unstyled-link[href*='/products/']",
-        ) || link;
-
+        card.querySelector(TITLE_SELECTORS) ||
+        (existing && existing.titleEl) ||
+        link;
       var productId =
-        card.getAttribute("data-product-id") ||
-        (title && title.getAttribute("data-product-id")) ||
+        readProductId(card) ||
+        readProductId(title) ||
+        readProductId(link) ||
+        (existing && existing.productId) ||
         null;
 
-      seen.add(link);
-      cards.push({
+      byKey.set(key, {
         card: card,
         titleEl: title,
         handle: handle,
-        productId: productId ? String(productId).replace(/\D/g, "") : null,
+        productId: productId,
       });
     });
 
-    return cards;
+    // Cart / drawer rows sometimes store product id without a classic card link title.
+    scope
+      .querySelectorAll(
+        ".cart-item[data-product-id], .cart__item[data-product-id], [data-cart-item]",
+      )
+      .forEach(function (card) {
+        if (byKey.has(card) || card.querySelector("[" + ATTR_INJECTED + "]")) {
+          return;
+        }
+        var link = card.querySelector("a[href*='/products/']");
+        var handle = link ? extractHandle(link.getAttribute("href")) : null;
+        var productId = readProductId(card);
+        if (!handle && !productId) return;
+        byKey.set(card, {
+          card: card,
+          titleEl:
+            card.querySelector(
+              ".cart-item__name, .cart__item-name, a[href*='/products/']",
+            ) || link,
+          handle: handle,
+          productId: productId,
+        });
+      });
+
+    return Array.from(byKey.values());
   }
 
   function insertRating(cardInfo, item, opts) {
     if (!item) return;
     if (!item.empty && !item.reviewCount) return;
+
     var card = cardInfo.card;
     if (card.querySelector("[" + ATTR_INJECTED + "]")) {
       card.setAttribute(ATTR_BOUND, "true");
@@ -152,7 +218,10 @@
 
     var titleEl = cardInfo.titleEl;
     var heading =
-      (titleEl && titleEl.closest(".card__heading, h2, h3, .product-card-title")) ||
+      (titleEl &&
+        titleEl.closest(
+          ".card__heading, .cart-item__name, .cart__item-name, h2, h3, h4, .product-card-title, .product-card__title",
+        )) ||
       titleEl;
 
     if (heading && heading.parentNode) {
@@ -166,6 +235,14 @@
     card.setAttribute(ATTR_BOUND, "true");
   }
 
+  function chunk(list, size) {
+    var out = [];
+    for (var i = 0; i < list.length; i += size) {
+      out.push(list.slice(i, i + size));
+    }
+    return out;
+  }
+
   function buildEndpoint(base, handles, ids) {
     var url = new URL(base, window.location.origin);
     if (!url.searchParams.get("shop")) {
@@ -176,8 +253,39 @@
     return url.toString();
   }
 
+  async function fetchRatings(opts, handles, ids) {
+    var byHandle = {};
+    var byId = {};
+    var handleChunks = chunk(handles, 80);
+    var idChunks = chunk(ids, 80);
+    var max = Math.max(handleChunks.length, idChunks.length, 1);
+
+    for (var i = 0; i < max; i++) {
+      var h = handleChunks[i] || (i === 0 ? handles.slice(0, 80) : []);
+      var d = idChunks[i] || (i === 0 ? ids.slice(0, 80) : []);
+      if (!h.length && !d.length) continue;
+
+      var response = await fetch(buildEndpoint(opts.endpoint, h, d), {
+        credentials: "same-origin",
+      });
+      var data = await response.json().catch(function () {
+        return {};
+      });
+      if (!response.ok || !data.products) continue;
+
+      data.products.forEach(function (row) {
+        if (row.handle) byHandle[String(row.handle).toLowerCase()] = row;
+        if (row.shopifyProductId) byId[String(row.shopifyProductId)] = row;
+      });
+    }
+
+    return { byHandle: byHandle, byId: byId };
+  }
+
   async function hydrate(root, opts) {
-    var cards = findProductCards(root || document);
+    var cards = findProductCards(root || document).filter(function (card) {
+      return card.card.getAttribute(ATTR_BOUND) !== "true";
+    });
     if (!cards.length) return;
 
     var handles = [];
@@ -186,41 +294,22 @@
       if (card.handle) handles.push(card.handle);
       if (card.productId) ids.push(card.productId);
     });
-
     handles = Array.from(new Set(handles));
     ids = Array.from(new Set(ids));
 
-    var response = await fetch(
-      buildEndpoint(opts.endpoint, handles, ids),
-      { credentials: "same-origin" },
-    );
-    var data = await response.json().catch(function () {
-      return {};
-    });
-    if (!response.ok || !data.products) return;
-
-    var byHandle = {};
-    var byId = {};
-    data.products.forEach(function (row) {
-      if (row.handle) byHandle[String(row.handle).toLowerCase()] = row;
-      if (row.shopifyProductId) byId[String(row.shopifyProductId)] = row;
-    });
+    var maps = await fetchRatings(opts, handles, ids);
 
     cards.forEach(function (card) {
       var item =
-        (card.productId && byId[card.productId]) ||
-        (card.handle && byHandle[card.handle]) ||
+        (card.productId && maps.byId[card.productId]) ||
+        (card.handle && maps.byHandle[card.handle]) ||
         null;
       if (item) {
         insertRating(card, item, opts);
         return;
       }
       if (opts.showEmpty) {
-        insertRating(
-          card,
-          { avgRating: 0, reviewCount: 0, empty: true },
-          opts,
-        );
+        insertRating(card, { avgRating: 0, reviewCount: 0, empty: true }, opts);
         return;
       }
       card.card.setAttribute(ATTR_BOUND, "true");
@@ -245,24 +334,44 @@
     var opts = readConfig();
     if (!opts) return;
 
+    var running = false;
+    var queued = false;
+
     var run = function () {
-      hydrate(document, opts).catch(function (error) {
-        console.error("[outrage-card-ratings]", error);
-      });
+      if (running) {
+        queued = true;
+        return;
+      }
+      running = true;
+      hydrate(document, opts)
+        .catch(function (error) {
+          console.error("[outrage-card-ratings]", error);
+        })
+        .finally(function () {
+          running = false;
+          if (queued) {
+            queued = false;
+            run();
+          }
+        });
     };
 
     run();
+    setTimeout(run, 800);
+    setTimeout(run, 2500);
 
     if ("MutationObserver" in window) {
       var timer = null;
       var observer = new MutationObserver(function () {
         clearTimeout(timer);
-        timer = setTimeout(run, 250);
+        timer = setTimeout(run, 300);
       });
       observer.observe(document.body, { childList: true, subtree: true });
     }
 
     document.addEventListener("shopify:section:load", run);
+    document.addEventListener("shopify:section:reorder", run);
+    window.addEventListener("pageshow", run);
   }
 
   if (document.readyState === "loading") {

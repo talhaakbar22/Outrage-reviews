@@ -1,6 +1,6 @@
 {% comment %}
-  App embed: auto-injects star rating + review count under product titles
-  on featured / collection / search product cards.
+  App embed: injects DB-backed star rating + review count under product titles
+  on every product card (featured, collection, search, related, cart, etc.).
 {% endcomment %}
 
 {% liquid
@@ -31,7 +31,7 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Shows average rating and review count under each product name on featured products, collections, search, and related product grids."
+      "content": "Shows each product’s rating and review count from Outrage Reviews under the product name — on featured collections, collection pages, search, related products, and cart line items. Enable this App embed once for the whole theme."
     },
     {
       "type": "checkbox",
@@ -42,7 +42,7 @@
     {
       "type": "checkbox",
       "id": "show_empty",
-      "label": "Show placeholder when a product has no reviews",
+      "label": "Show “No reviews yet” when a product has no reviews",
       "default": false
     },
     {
