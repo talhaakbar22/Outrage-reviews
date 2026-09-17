@@ -9,6 +9,59 @@ import {
 
 export const AUTH_CALLBACK_PATH = "/api/auth/callback";
 
+/**
+ * OAuth must run at the top browser level. Nested inside admin.shopify.com
+ * the authorize page is blocked (`refused to connect`) and the state cookie
+ * is often missing — which breaks installs on every new store.
+ */
+export function needsTopLevelOAuth(request: NextRequest) {
+  if (request.nextUrl.searchParams.get("top_level") === "1") {
+    return false;
+  }
+
+  const host = request.nextUrl.searchParams.get("host");
+  const embedded = request.nextUrl.searchParams.get("embedded");
+  const secFetchDest = request.headers.get("sec-fetch-dest");
+
+  return Boolean(host) || embedded === "1" || secFetchDest === "iframe";
+}
+
+/** HTML bounce that reloads /api/auth in window.top before starting OAuth. */
+export function topLevelOAuthBounce(request: NextRequest) {
+  const appUrl = resolveRequestAppUrl(request);
+  const bounce = new URL("/api/auth", appUrl.origin);
+  request.nextUrl.searchParams.forEach((value, key) => {
+    bounce.searchParams.set(key, value);
+  });
+  bounce.searchParams.set("top_level", "1");
+
+  const target = bounce.toString();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Installing Outrage Reviews…</title>
+    <script>
+      window.top.location.href = ${JSON.stringify(target)};
+    </script>
+  </head>
+  <body>
+    <p>Continue installing Outrage Reviews…</p>
+    <p><a href=${JSON.stringify(target)} target="_top">Click here if you are not redirected</a></p>
+  </body>
+</html>`;
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": "frame-ancestors https://*.myshopify.com https://admin.shopify.com;",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 export async function beginOAuth(request: NextRequest, shop: string) {
   const appUrl = resolveRequestAppUrl(request);
 
@@ -22,6 +75,10 @@ export async function beginOAuth(request: NextRequest, shop: string) {
       },
       { status: 400 },
     );
+  }
+
+  if (needsTopLevelOAuth(request)) {
+    return topLevelOAuthBounce(request);
   }
 
   const shopify = getShopifyForRequest(request);

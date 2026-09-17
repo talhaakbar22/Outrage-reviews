@@ -1,6 +1,10 @@
 {% comment %}
   "What customers say" — matches dashboard widget preview:
   score + summary, Write a review, Hide/Show reviews, listing cards.
+
+  Keep a single root element with shopify_attributes. Extra sibling nodes
+  (e.g. script after </section>) break theme-editor "Add block" with:
+  "customer-say not added. There is a problem with the app block."
 {% endcomment %}
 
 {% liquid
@@ -43,10 +47,8 @@
   endif
 
   assign write_review_href = blank
-  if rating_product
-    if block.settings.write_review_url != blank
-      assign write_review_href = block.settings.write_review_url
-    endif
+  if rating_product and block.settings.write_review_url != blank
+    assign write_review_href = block.settings.write_review_url
   endif
 
   assign product_image = blank
@@ -55,127 +57,133 @@
   endif
 
   assign customer_say_bootstrap = blank
-  if rating_product and rating_product.metafields.reviews.customer_say.value != blank
-    assign customer_say_bootstrap = rating_product.metafields.reviews.customer_say.value
+  if rating_product
+    assign customer_say_mf = rating_product.metafields.reviews.customer_say
+    if customer_say_mf != blank and customer_say_mf.value != blank
+      assign customer_say_bootstrap = customer_say_mf.value
+    endif
   endif
 %}
 
-{% if rating_product %}
-  <section
-    class="or-customer-say"
-    data-outrage-customer-say
-    data-product-id="{{ rating_product.id }}"
-    data-product-title="{{ rating_product.title | escape }}"
-    data-product-image="{{ product_image | escape }}"
-    data-rating="{{ rating_value }}"
-    data-review-count="{{ review_count }}"
-    data-endpoint="{{ summary_endpoint | escape }}"
-    data-submit-endpoint="{{ submit_endpoint | escape }}"
-    data-media-endpoint="{{ media_endpoint | escape }}"
-    data-reviews-page-size="{{ block.settings.reviews_page_size }}"
-    data-star-color="{{ block.settings.star_color | escape }}"
-    {{ block.shopify_attributes }}
-  >
-    {% if customer_say_bootstrap != blank %}
-      <script type="application/json" data-outrage-customer-say-bootstrap>
-        {{ customer_say_bootstrap | json }}
-      </script>
-    {% endif %}
-    <div class="or-customer-say__shell">
-      <div class="or-customer-say__hero">
-        <div class="or-customer-say__score">
-          <p class="or-customer-say__average" data-outrage-average>
-            {% if review_count > 0 %}{{ rating_value | round: 1 }}{% else %}—{% endif %}
-          </p>
-          <div data-outrage-score-stars>
-            {% render 'stars', rating: rating_value, size: 20, color: '#18181B' %}
-          </div>
-          <p class="or-customer-say__verified" data-outrage-verified-count>
-            {% if review_count > 0 %}{{ review_count }} approved reviews{% else %}0 approved reviews{% endif %}
-          </p>
-        </div>
-
-        <div class="or-customer-say__summary">
-          <div class="or-customer-say__summary-header">
-            <h2 class="or-customer-say__heading">What customer says</h2>
-            {% if block.settings.show_write_review %}
-              <div class="or-customer-say__summary-actions">
-                {% if write_review_href != blank %}
-                  <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
-                    {{ block.settings.write_review_label }}
-                  </a>
-                {% else %}
-                  <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
-                    {{ block.settings.write_review_label }}
-                  </button>
-                {% endif %}
-              </div>
-            {% endif %}
+<div {{ block.shopify_attributes }}>
+  {% if rating_product %}
+    <section
+      class="or-customer-say"
+      data-outrage-customer-say
+      data-product-id="{{ rating_product.id }}"
+      data-product-title="{{ rating_product.title | escape }}"
+      data-product-image="{{ product_image | escape }}"
+      data-rating="{{ rating_value }}"
+      data-review-count="{{ review_count }}"
+      data-endpoint="{{ summary_endpoint | escape }}"
+      data-submit-endpoint="{{ submit_endpoint | escape }}"
+      data-media-endpoint="{{ media_endpoint | escape }}"
+      data-reviews-page-size="{{ block.settings.reviews_page_size }}"
+      data-star-color="{{ block.settings.star_color | escape }}"
+    >
+      {% if customer_say_bootstrap != blank %}
+        <script type="application/json" data-outrage-customer-say-bootstrap>
+          {{ customer_say_bootstrap | json }}
+        </script>
+      {% endif %}
+      <div class="or-customer-say__shell">
+        <div class="or-customer-say__hero">
+          <div class="or-customer-say__score">
+            <p class="or-customer-say__average" data-outrage-average>
+              {% if review_count > 0 %}{{ rating_value | round: 1 }}{% else %}—{% endif %}
+            </p>
+            <div data-outrage-score-stars>
+              {% render 'stars', rating: rating_value, size: 20, color: '#18181B' %}
+            </div>
+            <p class="or-customer-say__verified" data-outrage-verified-count>
+              {% if review_count > 0 %}{{ review_count }} approved reviews{% else %}0 approved reviews{% endif %}
+            </p>
           </div>
 
-          <p class="or-customer-say__text" data-outrage-summary-text>
-            Loading customer summary…
-          </p>
-          <p class="or-customer-say__meta" data-outrage-summary-meta hidden></p>
+          <div class="or-customer-say__summary">
+            <div class="or-customer-say__summary-header">
+              <h2 class="or-customer-say__heading">What customer says</h2>
+              {% if block.settings.show_write_review %}
+                <div class="or-customer-say__summary-actions">
+                  {% if write_review_href != blank %}
+                    <a href="{{ write_review_href | escape }}" class="or-customer-say__write-review">
+                      {{ block.settings.write_review_label }}
+                    </a>
+                  {% else %}
+                    <button type="button" class="or-customer-say__write-review" data-outrage-write-review>
+                      {{ block.settings.write_review_label }}
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            <p class="or-customer-say__text" data-outrage-summary-text>
+              Loading customer summary…
+            </p>
+            <p class="or-customer-say__meta" data-outrage-summary-meta hidden></p>
+          </div>
         </div>
-      </div>
 
-      <div class="or-customer-say__tags" data-outrage-highlights hidden></div>
-      <div class="or-customer-say__snippets" data-outrage-snippets hidden></div>
+        <div class="or-customer-say__tags" data-outrage-highlights hidden></div>
+        <div class="or-customer-say__snippets" data-outrage-snippets hidden></div>
 
-      <div class="or-customer-say__actions" data-outrage-actions hidden>
-        <button type="button" class="or-customer-say__toggle" data-outrage-toggle-reviews>
-          Read all reviews
-        </button>
-      </div>
-
-      <div class="or-customer-say__listing" data-outrage-listing hidden>
-        <button type="button" class="or-customer-say__toggle" data-outrage-hide-reviews>
-          Hide reviews
-        </button>
-
-        <div
-          class="or-customer-say__filter-banner"
-          data-outrage-highlight-filter
-          hidden
-        >
-          <p class="or-customer-say__filter-text" data-outrage-highlight-filter-label></p>
-          <button type="button" class="or-customer-say__filter-clear" data-outrage-clear-highlight>
-            Show all reviews
+        <div class="or-customer-say__actions" data-outrage-actions hidden>
+          <button type="button" class="or-customer-say__toggle" data-outrage-toggle-reviews>
+            Read all reviews
           </button>
         </div>
 
-        <div class="or-customer-say__reviews" data-outrage-reviews-panel>
-          <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
-          <p class="or-customer-say__reviews-empty" data-outrage-reviews-empty hidden>
-            No published reviews yet.
-          </p>
-          <p class="or-customer-say__reviews-error" data-outrage-reviews-error hidden></p>
-          <button type="button" class="or-customer-say__load-more" data-outrage-load-more hidden>
-            Load more reviews
+        <div class="or-customer-say__listing" data-outrage-listing hidden>
+          <button type="button" class="or-customer-say__toggle" data-outrage-hide-reviews>
+            Hide reviews
           </button>
+
+          <div
+            class="or-customer-say__filter-banner"
+            data-outrage-highlight-filter
+            hidden
+          >
+            <p class="or-customer-say__filter-text" data-outrage-highlight-filter-label></p>
+            <button type="button" class="or-customer-say__filter-clear" data-outrage-clear-highlight>
+              Show all reviews
+            </button>
+          </div>
+
+          <div class="or-customer-say__reviews" data-outrage-reviews-panel>
+            <div class="or-customer-say__reviews-list" data-outrage-reviews-list></div>
+            <p class="or-customer-say__reviews-empty" data-outrage-reviews-empty hidden>
+              No published reviews yet.
+            </p>
+            <p class="or-customer-say__reviews-error" data-outrage-reviews-error hidden></p>
+            <button type="button" class="or-customer-say__load-more" data-outrage-load-more hidden>
+              Load more reviews
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-  <script src="{{ 'customer-say-review-modal.js' | asset_url }}" defer></script>
-{% else %}
-  <section class="or-customer-say or-customer-say--placeholder" {{ block.shopify_attributes }}>
-    <div class="or-customer-say__shell">
-      <p class="or-customer-say__text">
-        Add this section on a product page template, or pick a product in the block settings.
-      </p>
-    </div>
-  </section>
-{% endif %}
+    </section>
+    <script src="{{ 'customer-say-widget.js' | asset_url }}" defer></script>
+    <script src="{{ 'customer-say-review-modal.js' | asset_url }}" defer></script>
+  {% else %}
+    <section class="or-customer-say or-customer-say--placeholder">
+      <div class="or-customer-say__shell">
+        <p class="or-customer-say__text">
+          Add this section on a product page template, or pick a product in the block settings.
+        </p>
+      </div>
+    </section>
+  {% endif %}
+</div>
 
 {% schema %}
 {
   "name": "What customers say",
   "target": "section",
   "stylesheet": "reviews-widget.css",
-  "javascript": "customer-say-widget.js",
-  "templates": ["product"],
+  "enabled_on": {
+    "templates": ["product"]
+  },
   "settings": [
     {
       "type": "product",
@@ -201,7 +209,7 @@
     {
       "type": "checkbox",
       "id": "show_write_review",
-      "label": "Show “Write a review” button",
+      "label": "Show Write a review button",
       "default": true
     },
     {

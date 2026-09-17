@@ -1,7 +1,8 @@
 # Learn more: https://shopify.dev/docs/api/shopify-cli/configuration
 #
-# Local dev:  yarn shopify:dev  (CLI tunnel overrides localhost URLs)
-# Deploy:     yarn shopify:deploy  (requires SHOPIFY_APP_URL=https://… in .env)
+# Local dev:  yarn shopify:dev  (set SHOPIFY_DEV_STORE=store.myshopify.com)
+# Deploy:     yarn shopify:deploy  (one deploy; every installed store gets the extension)
+# Installs:   each store installs the same app — OAuth is per-shop offline session
 
 client_id = "ec07942824b8f47726108667643974e8"
 name = "Outrage Reviews"

@@ -74,20 +74,24 @@ export function buildProductTemplateEditorLink(shopDomain: string) {
 
 export const THEME_INSTALL_STEPS = [
   {
-    title: "Push the theme extension to Shopify",
-    body: "Running only `yarn dev` + ngrok does not upload theme blocks. From the project root run `yarn shopify:dev` (recommended) or `shopify app deploy`.",
+    title: "Deploy the theme extension once",
+    body: "Run yarn shopify:deploy. One app version ships the blocks to every store that has the app installed — you do not redeploy per store.",
+  },
+  {
+    title: "Install / open the app on that store",
+    body: "Each store needs its own install (Apps → Outrage Reviews). New stores run OAuth at the top level so admin.shopify.com is not nested in an iframe.",
   },
   {
     title: "Open the product page template",
-    body: "In the theme editor, switch the preview to Products → Default product (pick a product if prompted).",
+    body: "In that store’s theme editor, switch the preview to Products → Default product (pick a product if prompted).",
   },
   {
     title: "Add as its own section",
-    body: "Click Add section (not Add block) → Apps → What customers say. Place it below the product details.",
+    body: "Click Add section (not Add block inside Product information) → Apps → What customers say. Avoid inserting into a section that shows an HTML error.",
   },
   {
-    title: "Save and publish",
-    body: "Save the theme. The widget loads review summaries from `/apps/outrage-reviews/customer-say` via the app proxy.",
+    title: "Save",
+    body: "Save the theme. The widget loads from /apps/outrage-reviews/customer-say via the app proxy for that shop.",
   },
 ] as const;
 
