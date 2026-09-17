@@ -20,19 +20,8 @@ async function main() {
   const session = await loadOfflineSessionByShopId(shop.id);
   if (!session) throw new Error("No offline session");
 
-  const { shopifyApi, ApiVersion } = await import("@shopify/shopify-api");
-  // Reuse project client
-  const { createGraphqlClient } = await import("../lib/shopify/client").catch(
-    () => ({ createGraphqlClient: null as never }),
-  );
-
-  let client: { request: (q: string, opts?: object) => Promise<{ data?: any; errors?: any }> };
-  try {
-    const mod = await import("../lib/shopify/client");
-    client = (mod as any).createGraphqlClient(session);
-  } catch {
-    throw new Error("createGraphqlClient unavailable");
-  }
+  const { createGraphqlClient } = await import("../lib/shopify/client");
+  const client = createGraphqlClient(session);
 
   const lookup = await client.request(
     `#graphql
@@ -75,14 +64,16 @@ async function main() {
   );
 
   // Prefer the local row that already has reviews; remapped to real Shopify id.
-  let canonical = local.find((p) => /^\d+$/.test(p.shopifyProductId));
-  const withReviews = local
-    .map(async (p) => {
-      const count = await db.orm.public.Review.where({ productId: p.id })
-        .where((r) => r.status.in(["published", "approved"]))
-        .aggregate((agg) => ({ count: agg.count() }));
-      return { product: p, count: Number(count?.count ?? 0) };
-    });
+  let canonical:
+    | (typeof local)[number]
+    | null
+    | undefined = local.find((p) => /^\d+$/.test(p.shopifyProductId));
+  const withReviews = local.map(async (p) => {
+    const count = await db.orm.public.Review.where({ productId: p.id })
+      .where((r) => r.status.in(["published", "approved"]))
+      .aggregate((agg) => ({ count: agg.count() }));
+    return { product: p, count: Number(count?.count ?? 0) };
+  });
   const scored = await Promise.all(withReviews);
   scored.sort((a, b) => b.count - a.count);
   const best = scored[0];
@@ -94,7 +85,6 @@ async function main() {
   if (best.product.shopifyProductId !== realId) {
     // If another row already owns the real ID, move reviews onto it.
     const existingReal = local.find((p) => p.shopifyProductId === realId);
-    const target = existingReal ?? best.product;
     if (!existingReal) {
       await db.orm.public.Product.where({ id: best.product.id }).update({
         shopifyProductId: realId,
@@ -102,6 +92,9 @@ async function main() {
         title: remote.title,
       });
       console.log("Updated synthetic/wrong id to", realId);
+      canonical =
+        (await db.orm.public.Product.where({ id: best.product.id }).first()) ??
+        best.product;
     } else if (existingReal.id !== best.product.id) {
       const { reassignReviewsToProduct } = await import(
         "../services/products/repository"
@@ -112,8 +105,9 @@ async function main() {
       });
       console.log("Reassigned reviews to real product row", { moved, realId });
       canonical = existingReal;
+    } else {
+      canonical = existingReal;
     }
-    canonical = existingReal ?? (await db.orm.public.Product.where({ id: best.product.id }).first());
   } else {
     canonical = best.product;
   }
