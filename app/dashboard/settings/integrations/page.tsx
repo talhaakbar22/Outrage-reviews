@@ -5,6 +5,7 @@ import {
   withShopPath,
 } from "@/lib/dashboard/shop-context";
 import { LooxImportPanel } from "@/components/import/loox-import-panel";
+import { ProductsImportPanel } from "@/components/import/products-import-panel";
 
 type IntegrationsPageProps = {
   searchParams: Promise<{ shop?: string; host?: string }>;
@@ -28,16 +29,35 @@ export default async function IntegrationsPage({
         Integrations
       </h1>
       <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        Import historical reviews and connect migration tools.
+        Import products and historical reviews, and connect migration tools.
       </p>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
-          Loox CSV import
-        </h2>
-        <Suspense fallback={<p className="mt-4 text-sm text-zinc-500">Loading…</p>}>
-          <LooxImportPanel />
-        </Suspense>
+      <div className="mt-8 space-y-10">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+            Products
+          </h2>
+          <div className="mt-4">
+            <Suspense
+              fallback={<p className="text-sm text-zinc-500">Loading…</p>}
+            >
+              <ProductsImportPanel />
+            </Suspense>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+            Loox CSV import
+          </h2>
+          <div className="mt-4">
+            <Suspense
+              fallback={<p className="text-sm text-zinc-500">Loading…</p>}
+            >
+              <LooxImportPanel />
+            </Suspense>
+          </div>
+        </div>
       </div>
     </main>
   );

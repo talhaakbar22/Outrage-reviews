@@ -95,6 +95,40 @@ export class ShopifySyncService {
     return { productsSynced };
   }
 
+  /** Sync catalog products only (no orders/customers). */
+  async runProductsSync(shopId: string) {
+    const db = getDb();
+    const job = await db.orm.public.SyncJob.create({
+      shopId,
+      type: "products",
+      status: "running",
+      startedAt: nowInstant(),
+      payload: { phase: "products" },
+    });
+
+    if (!job) {
+      throw new Error("Failed to create products sync job");
+    }
+
+    try {
+      const productStats = await this.syncProducts(shopId);
+      await db.orm.public.SyncJob.where({ id: job.id }).update({
+        status: "completed",
+        completedAt: nowInstant(),
+        payload: { phase: "complete", ...productStats },
+      });
+      return { syncJobId: job.id, ...productStats };
+    } catch (error) {
+      await db.orm.public.SyncJob.where({ id: job.id }).update({
+        status: "failed",
+        completedAt: nowInstant(),
+        errorMessage:
+          error instanceof Error ? error.message : "Products sync failed",
+      });
+      throw error;
+    }
+  }
+
   async syncHistoricalData(shopId: string) {
     let cursor: string | null = null;
     let hasNextPage = true;
