@@ -38,6 +38,11 @@
   if rating_product and rating_product.featured_image
     assign product_image = rating_product.featured_image | image_url: width: 160
   endif
+
+  assign customer_say_bootstrap = blank
+  if rating_product and rating_product.metafields.reviews.customer_say.value != blank
+    assign customer_say_bootstrap = rating_product.metafields.reviews.customer_say.value
+  endif
 %}
 
 {% if rating_product %}
@@ -47,6 +52,8 @@
     data-product-id="{{ rating_product.id }}"
     data-product-title="{{ rating_product.title | escape }}"
     data-product-image="{{ product_image | escape }}"
+    data-rating="{{ rating_value }}"
+    data-review-count="{{ review_count }}"
     data-endpoint="{{ summary_endpoint | escape }}"
     data-submit-endpoint="{{ submit_endpoint | escape }}"
     data-media-endpoint="{{ media_endpoint | escape }}"
@@ -54,6 +61,11 @@
     data-star-color="{{ block.settings.star_color | escape }}"
     {{ block.shopify_attributes }}
   >
+    {% if customer_say_bootstrap != blank %}
+      <script type="application/json" data-outrage-customer-say-bootstrap>
+        {{ customer_say_bootstrap | json }}
+      </script>
+    {% endif %}
     <div class="or-customer-say__shell">
       <div class="or-customer-say__hero">
         <div class="or-customer-say__score">

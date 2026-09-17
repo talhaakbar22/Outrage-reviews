@@ -461,6 +461,38 @@
     return data;
   }
 
+  function readBootstrapPayload(root) {
+    var node = root.querySelector(
+      "script[type='application/json'][data-outrage-customer-say-bootstrap]",
+    );
+    var raw = node ? node.textContent : root.getAttribute("data-bootstrap");
+    if (!raw) return null;
+    try {
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return null;
+      var count = Math.max(
+        Number(parsed.count || 0),
+        Number(parsed.reviewsTotal || 0),
+        Array.isArray(parsed.reviews) ? parsed.reviews.length : 0,
+      );
+      if (count <= 0 && !(Number(parsed.rating) > 0)) return null;
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function mergeWithBootstrap(apiData, bootstrap) {
+    if (!bootstrap) return apiData;
+    var apiCount = Math.max(
+      Number((apiData && apiData.count) || 0),
+      Number((apiData && apiData.reviewsTotal) || 0),
+      Array.isArray(apiData && apiData.reviews) ? apiData.reviews.length : 0,
+    );
+    if (apiCount > 0) return apiData;
+    return Object.assign({}, bootstrap, { ok: true, fromBootstrap: true });
+  }
+
   function isPlaceholderSummary(text) {
     var value = String(text || "").trim().toLowerCase();
     if (!value) return true;
@@ -521,11 +553,14 @@
     var highlights = root.querySelector("[data-outrage-highlights]");
     var snippets = root.querySelector("[data-outrage-snippets]");
     var reviews = Array.isArray(data.reviews) ? data.reviews : [];
+    var liquidCount = Number(root.getAttribute("data-review-count") || 0);
+    var liquidRating = Number(root.getAttribute("data-rating") || 0);
     var reviewCount = Math.max(
       Number(data.count || 0),
       Number(data.reviewsTotal || 0),
       Number(data.summarySourceCount || 0),
       reviews.length,
+      liquidCount,
     );
     var sourceCount = Math.max(
       Number(data.summarySourceCount || 0),
@@ -536,7 +571,14 @@
         ? fallbackSummaryFromPayload(data, reviewCount)
         : data.summaryText || "No summary available yet.";
 
-    var rating = data.rating == null ? null : Number(data.rating);
+    // Prefer live API rating; keep Liquid metafield rating when API is empty
+    // so the header stars and this widget stay in sync.
+    var rating =
+      data.rating == null || Number(data.rating) <= 0
+        ? liquidRating > 0
+          ? liquidRating
+          : null
+        : Number(data.rating);
     if (average) {
       average.textContent =
         rating == null || Number.isNaN(rating) ? "—" : rating.toFixed(1);
@@ -669,7 +711,10 @@
           params.review_ids = state.highlightReviewIds.join(",");
         }
 
-        var data = await fetchPayload(root, params);
+        var data = mergeWithBootstrap(
+          await fetchPayload(root, params),
+          readBootstrapPayload(root),
+        );
         var batch = data.reviews || [];
 
         if (!append) {
@@ -722,6 +767,41 @@
           state: state,
         };
       } catch (error) {
+        var bootstrap = readBootstrapPayload(root);
+        if (bootstrap && !append) {
+          state.failed = false;
+          applySummary(root, bootstrap, starColor, state.highlightLabel);
+          state.highlights = Array.isArray(bootstrap.highlights)
+            ? bootstrap.highlights
+            : [];
+          state.totalReviewCount = Math.max(
+            Number(bootstrap.count || 0),
+            Number(bootstrap.reviewsTotal || 0),
+          );
+          state.reviewCount = state.totalReviewCount;
+          if (reviewsList) {
+            reviewsList.innerHTML = "";
+            renderReviews(reviewsList, bootstrap.reviews || [], starColor);
+            bindReplyToggles(reviewsList);
+            updateReviewsEmptyState(
+              root,
+              !(bootstrap.reviews && bootstrap.reviews.length),
+            );
+          }
+          state.offset = Array.isArray(bootstrap.reviews)
+            ? bootstrap.reviews.length
+            : 0;
+          state.hasMore = Boolean(bootstrap.hasMoreReviews);
+          state.loadedOnce = true;
+          syncFilterBanner();
+          syncToggleUi();
+          root._outrageCustomerSay = {
+            count: state.totalReviewCount || state.reviewCount,
+            pageSize: pageSize,
+            state: state,
+          };
+          return;
+        }
         state.failed = true;
         var message =
           error instanceof Error ? error.message : "Unable to load reviews";

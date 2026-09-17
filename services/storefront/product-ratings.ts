@@ -63,6 +63,7 @@ async function liveRatingsForProductIds(
 /**
  * Batch ratings for storefront product cards.
  * Always derives counts from approved reviews in the DB (not only cached product columns).
+ * Same-handle alias products (csv-/loox- imports) are rolled up onto the numeric Shopify id.
  */
 export async function listProductCardRatings(input: {
   shopDomain: string;
@@ -102,16 +103,86 @@ export async function listProductCardRatings(input: {
     }
   }
 
+  // Pull same-handle aliases so imported reviews attached to csv-/loox- rows count.
+  const handleKeys = [
+    ...new Set(
+      products
+        .map((row) => (row.handle || "").trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  if (handleKeys.length > 0) {
+    const aliases = await db.orm.public.Product.where({ shopId: shop.id })
+      .where((row) => row.handle.in(handleKeys))
+      .all();
+    const seen = new Set(products.map((row) => row.id));
+    for (const row of aliases) {
+      if (!seen.has(row.id)) {
+        products.push(row);
+        seen.add(row.id);
+      }
+    }
+  }
+
   if (products.length === 0) {
     return [];
   }
 
   const live = await liveRatingsForProductIds(products.map((row) => row.id));
 
-  // Persist corrected caches when stale so dashboard/metafields stay in sync.
+  // Roll up by handle, preferring a numeric Shopify product id as the public key.
+  type Rollup = {
+    shopifyProductId: string;
+    handle: string | null;
+    avgRating: number;
+    reviewCount: number;
+    ratingSum: number;
+  };
+  const byHandle = new Map<string, Rollup>();
+  const byId = new Map<string, Rollup>();
+
+  for (const product of products) {
+    const stats = live.get(product.id);
+    if (!stats || stats.reviewCount <= 0) continue;
+
+    const handle = (product.handle || "").trim().toLowerCase() || null;
+    const isNumeric = /^\d+$/.test(product.shopifyProductId);
+    const entry: Rollup = {
+      shopifyProductId: product.shopifyProductId,
+      handle: product.handle,
+      avgRating: stats.avgRating,
+      reviewCount: stats.reviewCount,
+      ratingSum: stats.avgRating * stats.reviewCount,
+    };
+
+    if (handle) {
+      const existing = byHandle.get(handle);
+      if (!existing) {
+        byHandle.set(handle, entry);
+      } else {
+        existing.ratingSum += entry.ratingSum;
+        existing.reviewCount += entry.reviewCount;
+        existing.avgRating = existing.ratingSum / existing.reviewCount;
+        if (isNumeric) {
+          existing.shopifyProductId = product.shopifyProductId;
+          existing.handle = product.handle;
+        }
+      }
+    } else {
+      byId.set(product.shopifyProductId, entry);
+    }
+  }
+
+  const rolled = [...byHandle.values(), ...byId.values()];
+
+  // Persist corrected caches on numeric Shopify products when we can map them.
   await Promise.all(
     products.map(async (product) => {
-      const stats = live.get(product.id);
+      if (!/^\d+$/.test(product.shopifyProductId)) return;
+      const handle = (product.handle || "").trim().toLowerCase();
+      const stats = handle
+        ? byHandle.get(handle)
+        : byId.get(product.shopifyProductId);
       if (!stats) {
         if ((product.reviewCount ?? 0) > 0 || product.avgRating != null) {
           await db.orm.public.Product.where({ id: product.id }).update({
@@ -135,16 +206,26 @@ export async function listProductCardRatings(input: {
     }),
   );
 
-  return products
-    .map((row) => {
-      const stats = live.get(row.id);
-      if (!stats || stats.reviewCount <= 0) return null;
-      return {
-        shopifyProductId: row.shopifyProductId,
-        handle: row.handle,
-        avgRating: stats.avgRating,
-        reviewCount: stats.reviewCount,
-      } satisfies ProductCardRating;
+  return rolled
+    .filter((row) => {
+      if (productIds.length > 0 && handles.length === 0) {
+        return productIds.includes(row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId);
+      }
+      if (handles.length > 0 && productIds.length === 0) {
+        return handles.includes((row.handle || "").trim().toLowerCase());
+      }
+      const idMatch = productIds.includes(
+        row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId,
+      );
+      const handleMatch = handles.includes(
+        (row.handle || "").trim().toLowerCase(),
+      );
+      return idMatch || handleMatch;
     })
-    .filter((row): row is ProductCardRating => Boolean(row));
+    .map((row) => ({
+      shopifyProductId: row.shopifyProductId,
+      handle: row.handle,
+      avgRating: row.avgRating,
+      reviewCount: row.reviewCount,
+    }));
 }

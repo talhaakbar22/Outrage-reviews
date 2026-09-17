@@ -110,10 +110,47 @@ export async function syncProductRatingMetafields(productId: string) {
   const ratings = await recalculateProductRatings(productId);
   const productGid = `gid://shopify/Product/${product.shopifyProductId}`;
 
+  let customerSay: Record<string, unknown> | null = null;
+  if (/^\d+$/.test(product.shopifyProductId)) {
+    try {
+      const { buildCustomerSayPayload } = await import(
+        "@/services/reviews/customer-summary"
+      );
+      const payload = await buildCustomerSayPayload({
+        shopId: product.shopId,
+        shopifyProductId: product.shopifyProductId,
+        includeReviews: true,
+        reviewsOffset: 0,
+        reviewsLimit: 10,
+        skipSummary: false,
+      });
+      customerSay = {
+        rating: payload.rating,
+        count: payload.count,
+        verifiedCount: payload.verifiedCount,
+        summaryText: payload.summaryText,
+        summarySourceCount: payload.summarySourceCount,
+        summaryGeneratedAt: payload.summaryGeneratedAt,
+        summaryMonthLabel: payload.summaryMonthLabel,
+        highlights: payload.highlights,
+        snippets: payload.snippets,
+        reviews: payload.reviews,
+        reviewsTotal: payload.reviewsTotal,
+        hasMoreReviews: payload.hasMoreReviews,
+      };
+    } catch (error) {
+      console.error(
+        "[ratings] failed to build customer-say metafield snapshot:",
+        error,
+      );
+    }
+  }
+
   await updateProductRatingMetafields(session, productGid, {
     averageRating: ratings.averageRating,
     reviewCount: ratings.reviewCount,
     ratingBreakdown: ratings.ratingBreakdown,
+    customerSay,
   });
 
   await getDb().orm.public.Product.where({ id: productId }).update({

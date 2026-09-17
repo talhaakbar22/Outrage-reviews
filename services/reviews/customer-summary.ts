@@ -9,7 +9,7 @@ import {
   reviewMatchesHighlight,
   type SummaryHighlight,
 } from "@/lib/customer-say-highlights";
-import { ensureProductSynced } from "@/services/products/ensure-synced";
+import { resolveStorefrontProduct } from "@/services/products/repository";
 import {
   APPROVED_REVIEW_STATUSES,
   fallbackSummaryFromReviews,
@@ -156,14 +156,10 @@ export async function buildCustomerSayPayload(input: {
   highlightReviewIds?: string[] | null;
 }) {
   const db = getDb();
-  let product = await db.orm.public.Product.where({
-    shopId: input.shopId,
-    shopifyProductId: input.shopifyProductId,
-  }).first();
-
-  if (!product) {
-    product = await ensureProductSynced(input.shopId, input.shopifyProductId);
-  }
+  const product = await resolveStorefrontProduct(
+    input.shopId,
+    input.shopifyProductId,
+  );
 
   if (!product) {
     return emptyPayload(input.reviewsOffset ?? 0, input.reviewsLimit ?? 10);
