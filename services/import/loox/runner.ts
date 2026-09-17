@@ -119,9 +119,13 @@ export async function runLooxImport(input: {
         );
       }
 
-      if (progress.processedRows % 25 === 0) {
+      if (progress.processedRows % 10 === 0) {
         await updateSyncJob(input.syncJobId, {
-          payload: { phase: "import", ...progress, errors: progress.errors.slice(-50) },
+          payload: {
+            phase: "import",
+            ...progress,
+            errors: progress.errors.slice(-80),
+          },
         });
       }
     }

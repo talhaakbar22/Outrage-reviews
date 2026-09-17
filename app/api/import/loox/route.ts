@@ -70,11 +70,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Import job not found" }, { status: 404 });
   }
 
+  let payload: unknown = job.payload ?? null;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      payload = { raw: payload };
+    }
+  }
+
   return NextResponse.json({
     id: job.id,
     status: job.status,
     type: job.type,
-    payload: job.payload,
+    payload,
     errorMessage: job.errorMessage,
     startedAt: job.startedAt,
     completedAt: job.completedAt,

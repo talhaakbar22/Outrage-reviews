@@ -18,9 +18,28 @@
   line-height: 1;
 }
 
+.or-stars--card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  margin: 0.35rem 0 0.2rem;
+  width: 100%;
+}
+
+.or-stars--inline {
+  display: inline-flex;
+  margin: 0;
+}
+
 .or-stars__count {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--or-muted);
+  letter-spacing: 0.01em;
+}
+
+.or-stars__count--empty {
+  font-style: italic;
 }
 
 .or-star-row {

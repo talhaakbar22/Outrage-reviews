@@ -51,11 +51,24 @@ The app must be **installed** on the dev store. After `shopify app dev` or deplo
 
 ## Merchant setup — where to find widgets
 
-These are **theme blocks**, not **App embeds**.
+### Product card ratings (Featured products / collections)
+
+Easiest: enable the **Product card ratings** app embed (auto-injects under product titles on grids).
+
+1. Online Store → Themes → Customize  
+2. Theme settings → **App embeds**  
+3. Enable **Product card ratings**  
+4. Save  
+
+Alternatively add the **Star rating** block inside a product card (needs `@app` / app blocks in that card) with Product left blank (autofill).
+
+### Other widgets (PDP)
+
+These are **theme blocks**, not App embeds (except Product card ratings / referral embeds).
 
 | Wrong place | Right place |
 |---|---|
-| Theme settings → **App embeds** | Product template → section → **Add block** → **Apps** |
+| Theme settings → **App embeds** (for review list / customer say) | Product template → section → **Add block** → **Apps** |
 
 ### Steps
 

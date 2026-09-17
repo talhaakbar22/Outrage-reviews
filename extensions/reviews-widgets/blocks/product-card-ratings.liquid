@@ -1,0 +1,72 @@
+{% comment %}
+  App embed: auto-injects star rating + review count under product titles
+  on featured / collection / search product cards.
+{% endcomment %}
+
+{% liquid
+  if block.settings.api_base_url != blank
+    assign ratings_endpoint = block.settings.api_base_url | append: '/api/storefront/product-ratings'
+  else
+    assign ratings_endpoint = '/apps/outrage-reviews/product-ratings'
+  endif
+%}
+
+<div
+  data-outrage-card-ratings
+  data-endpoint="{{ ratings_endpoint | escape }}"
+  data-star-size="{{ block.settings.star_size }}"
+  data-star-color="{{ block.settings.star_color | escape }}"
+  data-show-count="{% if block.settings.show_count %}true{% else %}false{% endif %}"
+  data-show-empty="{% if block.settings.show_empty %}true{% else %}false{% endif %}"
+  hidden
+></div>
+
+<script src="{{ 'product-card-ratings.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Product card ratings",
+  "target": "body",
+  "stylesheet": "reviews-widget.css",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows average rating and review count under each product name on featured products, collections, search, and related product grids."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Show review count",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_empty",
+      "label": "Show placeholder when a product has no reviews",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "star_size",
+      "min": 12,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "label": "Star size",
+      "default": 14
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#18181B"
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "API base URL (optional)",
+      "info": "Leave blank to use the app proxy."
+    }
+  ]
+}
+{% endschema %}

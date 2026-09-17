@@ -1,50 +1,79 @@
 {% comment %}
   Star rating from product metafields (reviews.rating / reviews.count).
-  No network request — safe for collection product cards and PDP headers.
+  Use in product cards (Featured products / collection grids) or PDP.
+  Product setting uses autofill so each card receives the correct product.
 {% endcomment %}
 
 {% liquid
-  assign rating_product = closest.product | default: product | default: block.settings.product
+  assign rating_product = block.settings.product
+  if rating_product == blank
+    assign rating_product = closest.product | default: product
+  endif
+
   assign rating_value = 0
   assign review_count = 0
 
   if rating_product
-    if rating_product.metafields.reviews.rating.value != blank
-      assign rating_value = rating_product.metafields.reviews.rating.value | plus: 0
+    assign rating_mf = rating_product.metafields.reviews.rating
+    assign count_mf = rating_product.metafields.reviews.count
+
+    if rating_mf != blank
+      if rating_mf.value.rating != blank
+        assign rating_value = rating_mf.value.rating | plus: 0
+      elsif rating_mf.value.value != blank
+        assign rating_value = rating_mf.value.value | plus: 0
+      elsif rating_mf.value != blank
+        assign rating_value = rating_mf.value | plus: 0
+      endif
     endif
-    if rating_product.metafields.reviews.count.value != blank
-      assign review_count = rating_product.metafields.reviews.count.value | plus: 0
+
+    if count_mf != blank
+      if count_mf.value != blank
+        assign review_count = count_mf.value | plus: 0
+      else
+        assign review_count = count_mf | plus: 0
+      endif
     endif
   endif
 
   assign show_empty = block.settings.show_empty
   assign show_count = block.settings.show_count
   assign star_size = block.settings.star_size
-  assign star_color = block.settings.star_color
+  assign star_color = block.settings.star_color | default: '#18181B'
+  assign layout = block.settings.layout | default: 'card'
 %}
 
 {% if rating_product %}
   {% if review_count > 0 or show_empty %}
-  <div
-    class="or-stars"
-    data-outrage-stars
-    data-product-id="{{ rating_product.id }}"
-    style="--or-star-size: {{ star_size }}px; --or-star-color: #18181B;"
-    {{ block.shopify_attributes }}
-  >
-    {% render 'stars', rating: rating_value, size: star_size, color: '#18181B' %}
+    <div
+      class="or-stars{% if layout == 'card' %} or-stars--card{% endif %}{% if layout == 'inline' %} or-stars--inline{% endif %}"
+      data-outrage-stars
+      data-product-id="{{ rating_product.id }}"
+      style="--or-star-size: {{ star_size }}px; --or-star-color: {{ star_color }};"
+      {{ block.shopify_attributes }}
+    >
+      {% if review_count > 0 %}
+        {% render 'stars', rating: rating_value, size: star_size, color: star_color %}
 
-    {% if show_count %}
-      <span class="or-stars__count">
-        {% if review_count > 0 %}
-          {{ rating_value | round: 1 }} · {{ review_count }}
-          {% if review_count == 1 %}review{% else %}reviews{% endif %}
-        {% else %}
-          {{ block.settings.empty_label }}
+        {% if show_count %}
+          <span class="or-stars__count">
+            {{ rating_value | round: 1 }}
+            ·
+            {{ review_count }}
+            {% if review_count == 1 %}review{% else %}reviews{% endif %}
+          </span>
         {% endif %}
-      </span>
-    {% endif %}
-  </div>
+      {% else %}
+        {% if block.settings.show_empty_stars %}
+          {% render 'stars', rating: 0, size: star_size, color: star_color %}
+        {% endif %}
+        {% if show_count %}
+          <span class="or-stars__count or-stars__count--empty">
+            {{ block.settings.empty_label }}
+          </span>
+        {% endif %}
+      {% endif %}
+    </div>
   {% endif %}
 {% endif %}
 
@@ -53,24 +82,41 @@
   "name": "Star rating",
   "target": "section",
   "stylesheet": "reviews-widget.css",
-  "templates": ["product", "collection", "index", "search"],
+  "templates": ["product", "collection", "index", "search", "page", "cart"],
   "settings": [
     {
       "type": "product",
       "id": "product",
       "label": "Product",
-      "info": "Leave blank to use the closest product in context (recommended for product cards)."
+      "autofill": true,
+      "info": "Leave blank on product cards — autofill uses the card’s product."
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "card", "label": "Under product title (card)" },
+        { "value": "inline", "label": "Inline" }
+      ],
+      "default": "card"
     },
     {
       "type": "checkbox",
       "id": "show_count",
-      "label": "Show rating count",
+      "label": "Show rating and review count",
       "default": true
     },
     {
       "type": "checkbox",
       "id": "show_empty",
       "label": "Show when there are no reviews",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_empty_stars",
+      "label": "Show empty stars when there are no reviews",
       "default": false
     },
     {
@@ -87,7 +133,7 @@
       "step": 1,
       "unit": "px",
       "label": "Star size",
-      "default": 16
+      "default": 14
     },
     {
       "type": "color",
