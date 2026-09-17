@@ -57,7 +57,9 @@
 
   function buildEndpoint(base, productId, params) {
     var url = new URL(base, window.location.origin);
-    url.searchParams.set("product_id", String(productId));
+    if (productId) {
+      url.searchParams.set("product_id", String(productId));
+    }
     Object.keys(params || {}).forEach(function (key) {
       url.searchParams.set(key, String(params[key]));
     });
@@ -368,6 +370,17 @@
               escapeHtml(review.body) +
               "</p>"
             : "") +
+          (review.productTitle
+            ? '<p class="or-customer-say__review-product">Item: ' +
+              (review.productHandle
+                ? '<a href="/products/' +
+                  escapeHtml(review.productHandle) +
+                  '">' +
+                  escapeHtml(review.productTitle) +
+                  "</a>"
+                : escapeHtml(review.productTitle)) +
+              "</p>"
+            : "") +
           renderMerchantReply(review) +
           "</div>" +
           renderReviewMedia(review.media) +
@@ -426,13 +439,21 @@
   }
 
   async function fetchPayload(root, params) {
+    var scope = root.getAttribute("data-scope") || "product";
     var productId = root.getAttribute("data-product-id");
     var endpoint = root.getAttribute("data-endpoint");
-    if (!productId || !endpoint) {
+    if (!endpoint) {
+      throw new Error("Missing widget configuration");
+    }
+    if (scope !== "shop" && !productId) {
       throw new Error("Missing widget configuration");
     }
 
-    var url = buildEndpoint(endpoint, productId, params);
+    var url = buildEndpoint(
+      endpoint,
+      scope === "shop" ? null : productId,
+      params,
+    );
     var headers = { Accept: "application/json" };
     if (/ngrok/i.test(url)) {
       headers["ngrok-skip-browser-warning"] = "69420";
@@ -934,9 +955,11 @@
       openHighlight(label, ids);
     });
 
-    // Keep reviews collapsed until the shopper presses Read all / a badge.
+    // Keep product reviews collapsed until Read all / a badge.
+    // Store-wide widget opens the list by default (Loox-style gallery).
     await loadReviews(false);
-    state.expanded = false;
+    var isStoreScope = root.getAttribute("data-scope") === "shop";
+    state.expanded = isStoreScope;
     state.highlightLabel = null;
     state.highlightReviewIds = [];
     syncFilterBanner();

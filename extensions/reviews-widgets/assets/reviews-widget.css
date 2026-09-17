@@ -938,8 +938,20 @@ button.or-customer-say__tag {
   cursor: wait;
 }
 
-.or-customer-say .or-star-row {
-  --or-star-size: 18px;
+.or-customer-say__review-product {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: #71717a;
+}
+
+.or-customer-say__review-product a {
+  color: #18181b;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.or-customer-say--store .or-customer-say__heading {
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
 }
 
 .or-customer-say [data-outrage-score-stars] .or-star-row {

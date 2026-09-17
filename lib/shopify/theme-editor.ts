@@ -1,5 +1,6 @@
 export type ThemeBlockId =
   | "customer-say"
+  | "customer-say-store"
   | "review-list"
   | "review-summary"
   | "stars";
@@ -87,6 +88,25 @@ export const THEME_INSTALL_STEPS = [
   {
     title: "Save and publish",
     body: "Save the theme. The widget loads review summaries from `/apps/outrage-reviews/customer-say` via the app proxy.",
+  },
+] as const;
+
+export const STORE_REVIEWS_STEPS = [
+  {
+    title: "Deploy the theme extension",
+    body: "Run `yarn shopify:dev` or `yarn shopify:deploy` so “All store reviews” appears under Apps sections.",
+  },
+  {
+    title: "Open Home or a Reviews page",
+    body: "Theme editor → preview Home, or create a page titled Reviews and open that template.",
+  },
+  {
+    title: "Add the section",
+    body: "Add section → Apps → All store reviews. Place it where you want the full review gallery.",
+  },
+  {
+    title: "Save",
+    body: "Shoppers see store-wide rating, summary, and every approved review with product links.",
   },
 ] as const;
 

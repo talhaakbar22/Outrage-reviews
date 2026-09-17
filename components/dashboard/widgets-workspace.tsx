@@ -3,6 +3,7 @@ import {
   buildThemeBlockDeepLink,
   buildThemeEmbedDeepLink,
   PRODUCT_CARD_RATINGS_STEPS,
+  STORE_REVIEWS_STEPS,
   THEME_INSTALL_STEPS,
 } from "@/lib/shopify/theme-editor";
 import { WidgetsCustomizePanel } from "@/components/dashboard/widgets-customize-panel";
@@ -25,6 +26,13 @@ export function WidgetsWorkspace({
     shopDomain,
     shopifyApiKey,
     block: "customer-say",
+    target: "newAppsSection",
+  });
+  const storeReviewsDeepLink = buildThemeBlockDeepLink({
+    shopDomain,
+    shopifyApiKey,
+    block: "customer-say-store",
+    template: "index",
     target: "newAppsSection",
   });
   const productCardRatingsEmbedUrl = buildThemeEmbedDeepLink({
@@ -109,6 +117,46 @@ export function WidgetsWorkspace({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+                    4.8
+                  </div>
+                  <div className="text-zinc-900 dark:text-zinc-100">★★★★★</div>
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-700 dark:text-zinc-300">
+                  All store reviews
+                </p>
+                <p className="line-clamp-3 text-[11px] leading-5 text-zinc-600 dark:text-zinc-400">
+                  Browse every approved review across all products — rating,
+                  summary, and a full scrollable list with product links.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3 p-5">
+            <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+              All store reviews
+            </h2>
+            <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              Store-wide gallery like Loox’s all-reviews section. Best on the
+              Home page or a dedicated Reviews page.
+            </p>
+            <a
+              href={storeReviewsDeepLink}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary inline-flex gap-2"
+            >
+              Add to Home / page
+              <span aria-hidden>↗</span>
+            </a>
+          </div>
+        </article>
+
+        <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="border-b border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
                     4.9
                   </div>
                   <div className="text-zinc-900 dark:text-zinc-100">★★★★★</div>
@@ -149,6 +197,35 @@ export function WidgetsWorkspace({
           </div>
         </article>
       </div>
+
+      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+            All store reviews — step by step
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            One section that lists every approved review in the shop.
+          </p>
+        </div>
+        <ol className="list-decimal space-y-3 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+          {STORE_REVIEWS_STEPS.map((step) => (
+            <li key={step.title}>
+              <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                {step.title}.{" "}
+              </span>
+              {step.body}
+            </li>
+          ))}
+        </ol>
+        <a
+          href={storeReviewsDeepLink}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-primary inline-flex"
+        >
+          Open theme editor → All store reviews
+        </a>
+      </section>
 
       <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div>

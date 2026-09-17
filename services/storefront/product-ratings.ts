@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/prisma";
 import { getShopByDomain } from "@/services/storefront/reviews";
 import { APPROVED_REVIEW_STATUSES } from "@/services/reviews/ai-summary";
+import { resolveStorefrontProduct } from "@/services/products/repository";
 
 export type ProductCardRating = {
   shopifyProductId: string;
@@ -62,8 +63,8 @@ async function liveRatingsForProductIds(
 
 /**
  * Batch ratings for storefront product cards.
- * Always derives counts from approved reviews in the DB (not only cached product columns).
- * Same-handle alias products (csv-/loox- imports) are rolled up onto the numeric Shopify id.
+ * Live DB aggregates + same-handle alias rollup. Resolves stale Shopify IDs
+ * and matches handles case-insensitively so imported reviews show on every card.
  */
 export async function listProductCardRatings(input: {
   shopDomain: string;
@@ -90,12 +91,29 @@ export async function listProductCardRatings(input: {
           .all()
       : [];
 
+  // Case-insensitive handle match: load reviewed products and filter in memory.
+  // Exact `.in(handles)` misses mixed-case import handles.
   if (handles.length > 0) {
-    const byHandle = await db.orm.public.Product.where({ shopId: shop.id })
-      .where((row) => row.handle.in(handles))
+    const handleSet = new Set(handles);
+    const candidates = await db.orm.public.Product.where({
+      shopId: shop.id,
+    })
+      .where((row) => row.reviewCount.gt(0))
       .all();
     const seen = new Set(products.map((row) => row.id));
-    for (const row of byHandle) {
+    for (const row of candidates) {
+      const key = (row.handle || "").trim().toLowerCase();
+      if (!key || !handleSet.has(key) || seen.has(row.id)) continue;
+      products.push(row);
+      seen.add(row.id);
+    }
+
+    // Also try exact match for products with reviewCount cache still at 0
+    // but live approved reviews (stale cache).
+    const exact = await db.orm.public.Product.where({ shopId: shop.id })
+      .where((row) => row.handle.in(handles))
+      .all();
+    for (const row of exact) {
       if (!seen.has(row.id)) {
         products.push(row);
         seen.add(row.id);
@@ -103,7 +121,32 @@ export async function listProductCardRatings(input: {
     }
   }
 
-  // Pull same-handle aliases so imported reviews attached to csv-/loox- rows count.
+  // Heal missing numeric IDs (stale import ids / remapped catalog).
+  const foundIds = new Set(
+    products
+      .map((row) => row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId)
+      .filter(Boolean),
+  );
+  const missingIds = productIds.filter((id) => !foundIds.has(id)).slice(0, 40);
+  if (missingIds.length > 0) {
+    const resolved = await Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          return await resolveStorefrontProduct(shop.id, id);
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const seen = new Set(products.map((row) => row.id));
+    for (const row of resolved) {
+      if (!row || seen.has(row.id)) continue;
+      products.push(row);
+      seen.add(row.id);
+    }
+  }
+
+  // Pull same-handle aliases (any casing) so csv-/loox- reviews count.
   const handleKeys = [
     ...new Set(
       products
@@ -112,15 +155,16 @@ export async function listProductCardRatings(input: {
     ),
   ];
   if (handleKeys.length > 0) {
-    const aliases = await db.orm.public.Product.where({ shopId: shop.id })
-      .where((row) => row.handle.in(handleKeys))
+    const handleSet = new Set(handleKeys);
+    const reviewed = await db.orm.public.Product.where({ shopId: shop.id })
+      .where((row) => row.reviewCount.gt(0))
       .all();
     const seen = new Set(products.map((row) => row.id));
-    for (const row of aliases) {
-      if (!seen.has(row.id)) {
-        products.push(row);
-        seen.add(row.id);
-      }
+    for (const row of reviewed) {
+      const key = (row.handle || "").trim().toLowerCase();
+      if (!key || !handleSet.has(key) || seen.has(row.id)) continue;
+      products.push(row);
+      seen.add(row.id);
     }
   }
 
@@ -130,7 +174,6 @@ export async function listProductCardRatings(input: {
 
   const live = await liveRatingsForProductIds(products.map((row) => row.id));
 
-  // Roll up by handle, preferring a numeric Shopify product id as the public key.
   type Rollup = {
     shopifyProductId: string;
     handle: string | null;
@@ -149,7 +192,7 @@ export async function listProductCardRatings(input: {
     const isNumeric = /^\d+$/.test(product.shopifyProductId);
     const entry: Rollup = {
       shopifyProductId: product.shopifyProductId,
-      handle: product.handle,
+      handle,
       avgRating: stats.avgRating,
       reviewCount: stats.reviewCount,
       ratingSum: stats.avgRating * stats.reviewCount,
@@ -165,7 +208,7 @@ export async function listProductCardRatings(input: {
         existing.avgRating = existing.ratingSum / existing.reviewCount;
         if (isNumeric) {
           existing.shopifyProductId = product.shopifyProductId;
-          existing.handle = product.handle;
+          existing.handle = handle;
         }
       }
     } else {
@@ -173,9 +216,27 @@ export async function listProductCardRatings(input: {
     }
   }
 
+  // Prefer returning the live catalog id when the request asked for it.
+  for (const id of productIds) {
+    for (const entry of byHandle.values()) {
+      if (entry.shopifyProductId === id) continue;
+      // If this handle's reviews are the ones for a requested live id that we
+      // resolved onto a product row, prefer the requested id as the public key.
+      const matchingProduct = products.find(
+        (row) =>
+          (row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId) ===
+            id &&
+          (row.handle || "").trim().toLowerCase() ===
+            (entry.handle || "").trim().toLowerCase(),
+      );
+      if (matchingProduct && /^\d+$/.test(id)) {
+        entry.shopifyProductId = id;
+      }
+    }
+  }
+
   const rolled = [...byHandle.values(), ...byId.values()];
 
-  // Persist corrected caches on numeric Shopify products when we can map them.
   await Promise.all(
     products.map(async (product) => {
       if (!/^\d+$/.test(product.shopifyProductId)) return;
@@ -183,15 +244,7 @@ export async function listProductCardRatings(input: {
       const stats = handle
         ? byHandle.get(handle)
         : byId.get(product.shopifyProductId);
-      if (!stats) {
-        if ((product.reviewCount ?? 0) > 0 || product.avgRating != null) {
-          await db.orm.public.Product.where({ id: product.id }).update({
-            avgRating: null,
-            reviewCount: 0,
-          });
-        }
-        return;
-      }
+      if (!stats) return;
       const cachedCount = Number(product.reviewCount ?? 0);
       const cachedAvg = Number(product.avgRating ?? 0);
       if (
@@ -209,7 +262,9 @@ export async function listProductCardRatings(input: {
   return rolled
     .filter((row) => {
       if (productIds.length > 0 && handles.length === 0) {
-        return productIds.includes(row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId);
+        return productIds.includes(
+          row.shopifyProductId.replace(/\D/g, "") || row.shopifyProductId,
+        );
       }
       if (handles.length > 0 && productIds.length === 0) {
         return handles.includes((row.handle || "").trim().toLowerCase());

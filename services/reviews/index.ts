@@ -38,3 +38,4 @@ export {
   type SummaryHighlight,
   type SummarySnippet,
 } from "./customer-summary";
+export { buildShopCustomerSayPayload } from "./shop-customer-summary";
