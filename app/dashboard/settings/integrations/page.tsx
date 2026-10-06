@@ -41,7 +41,7 @@ export default async function IntegrationsPage({
             <Suspense
               fallback={<p className="text-sm text-zinc-500">Loading…</p>}
             >
-              <ProductsImportPanel />
+              <ProductsImportPanel shop={query.shop} />
             </Suspense>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default async function IntegrationsPage({
             <Suspense
               fallback={<p className="text-sm text-zinc-500">Loading…</p>}
             >
-              <LooxImportPanel />
+              <LooxImportPanel shop={query.shop} />
             </Suspense>
           </div>
         </div>

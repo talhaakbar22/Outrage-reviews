@@ -1,5 +1,5 @@
 /**
- * Run Loox CSV import against the local DB (bypasses hsxperts.co).
+ * Run Loox CSV import against the local DB (bypasses the retired hsxperts.co host).
  *
  *   yarn tsx --import dotenv/config scripts/import-loox-local.ts
  */

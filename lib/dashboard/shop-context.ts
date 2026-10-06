@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/prisma";
 import { normalizeShopDomain } from "@/lib/shopify/auth";
 import { loadOfflineSession } from "@/services/shop/service";
+import {
+  readDashboardShopCookies,
+} from "@/lib/dashboard/shop-cookie";
 
 export type DashboardShop = {
   id: string;
@@ -30,18 +33,29 @@ export function withShopPath(path: string, params: ShopQuery) {
 }
 
 export async function requireDashboardShop(params: ShopQuery) {
-  if (!params.shop) {
-    redirect("/");
+  let shopParam = params.shop?.trim();
+  let hostParam = params.host?.trim();
+
+  // Soft navigations / iframe remounts sometimes drop ?shop=. Use the last
+  // successful dashboard shop cookie so we don't bounce to Connect mid-flow.
+  if (!shopParam) {
+    const saved = await readDashboardShopCookies();
+    if (saved.shop) {
+      shopParam = saved.shop;
+      hostParam = hostParam || saved.host;
+    } else {
+      redirect("/");
+    }
   }
 
-  const shopDomain = normalizeShopDomain(params.shop);
+  const shopDomain = normalizeShopDomain(shopParam);
   const session = await loadOfflineSession(shopDomain);
 
   if (!session?.accessToken || !session.isActive(undefined)) {
     const auth = new URL("/api/auth", "http://local");
     auth.searchParams.set("shop", shopDomain);
-    if (params.host) {
-      auth.searchParams.set("host", params.host);
+    if (hostParam) {
+      auth.searchParams.set("host", hostParam);
     }
     redirect(`${auth.pathname}${auth.search}`);
   }
@@ -59,7 +73,7 @@ export async function requireDashboardShop(params: ShopQuery) {
     shop: shop as DashboardShop,
     shopDomain,
     session,
-    query: { shop: shopDomain, host: params.host },
+    query: { shop: shopDomain, host: hostParam },
   };
 }
 

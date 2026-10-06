@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/prisma";
+import { getDb, toIsoString } from "@/lib/prisma";
 import type { ShopBranding } from "@/services/email/editable-templates";
 
 export type ShopSettingsInput = {
@@ -109,6 +109,30 @@ export type ShopProductListItem = {
   status: string;
 };
 
+function toShopProductListItem(product: {
+  id: string;
+  title: string;
+  handle: string | null;
+  shopifyProductId: string;
+  imageUrl: string | null;
+  avgRating: number | null;
+  reviewCount: number;
+  status: string;
+}): ShopProductListItem {
+  // Explicit pick — Product rows include Temporal.Instant timestamps that cannot
+  // cross the Server → Client Component boundary.
+  return {
+    id: product.id,
+    title: product.title,
+    handle: product.handle,
+    shopifyProductId: product.shopifyProductId,
+    imageUrl: product.imageUrl,
+    avgRating: product.avgRating,
+    reviewCount: product.reviewCount,
+    status: product.status,
+  };
+}
+
 function sortProducts(
   products: ShopProductListItem[],
   sort: "title" | "rating" | "reviews",
@@ -170,7 +194,7 @@ export async function listShopProductsPage(
 
     const merged = new Map<string, ShopProductListItem>();
     for (const product of [...byTitle, ...byHandle]) {
-      merged.set(product.id, product as ShopProductListItem);
+      merged.set(product.id, toShopProductListItem(product));
     }
 
     const sorted = sortProducts([...merged.values()], sort);
@@ -198,10 +222,8 @@ export async function listShopProductsPage(
         ? collection.orderBy((product) => product.reviewCount.desc())
         : collection.orderBy((product) => product.title.asc());
 
-  const products = (await ordered
-    .offset(offset)
-    .limit(pageSize)
-    .all()) as ShopProductListItem[];
+  const rows = await ordered.offset(offset).limit(pageSize).all();
+  const products = rows.map(toShopProductListItem);
 
   return {
     products,
@@ -219,12 +241,15 @@ export async function listShopMedia(shopId: string, limit = 60) {
 
   return reviews.flatMap((review) =>
     review.media.map((item) => ({
-      ...item,
+      id: item.id,
+      url: item.url,
+      thumbnailUrl: item.thumbnailUrl,
+      type: item.type,
       reviewId: review.id,
       rating: review.rating,
       productTitle: review.product.title,
       reviewerName: review.reviewerName,
-      createdAt: review.createdAt,
+      createdAt: toIsoString(review.createdAt) ?? "",
     })),
   );
 }

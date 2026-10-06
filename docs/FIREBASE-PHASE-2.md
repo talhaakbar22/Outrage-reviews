@@ -1,5 +1,11 @@
 # Firebase Phase 2 — Outrage Reviews
 
+## Retiring hsxperts.co
+
+**https://hsxperts.co is retired.** Staff enter Reviews from the Firebase-hosted
+dashboard; Shopify App URL must move to a Firebase App Hosting (or equivalent)
+HTTPS host on project `outrageldn-dashboard`. See [RETIRE-HSXPERTS.md](./RETIRE-HSXPERTS.md).
+
 ## Verdict
 
 Phase 2 is **good and possible**. This sets up Firebase **beside** Postgres. Do **not** delete PostgreSQL until repositories are ported (Phase 3+).
@@ -54,9 +60,20 @@ Firebase Authentication does **not** replace Shopify OAuth in Phase 2.
 
 ## Storage
 
-- Keep current S3/local media path working.
-- Firebase Storage path reserved: `review-media/{shopId}/{reviewId}/{file}`
-- Cut media over in a later phase if desired.
+Review images live in **Firebase Storage** on `FIREBASE_STORAGE_BUCKET`
+(`outrageldn-dashboard.firebasestorage.app`):
+
+| Path | Purpose |
+|---|---|
+| `review-media/{shopId}/pending/{ownerId}/{file}` | Browser uploads (pre-process) |
+| `review-media/{shopId}/{reviewId}/{mediaId}/full.webp` | Processed full image |
+| `review-media/{shopId}/{reviewId}/{mediaId}/thumb.webp` | Thumbnail |
+
+- Uploads: Next.js issues a short-lived URL → browser `PUT`s to `/api/media/direct-upload` (default) or a GCS v4 signed URL when `MEDIA_UPLOAD_VIA_PROXY=false`.
+- Public URLs: `https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media` (rules allow public read on processed objects).
+- Rules fragment: `firebase/storage.reviews.rules` — merge/deploy onto the shared project bucket.
+- Bucket CORS (for direct signed PUTs): `outragelondondashboard/storage.cors.json` — apply with `gsutil cors set storage.cors.json gs://outrageldn-dashboard.firebasestorage.app`.
+- AWS S3 env vars are legacy and unused.
 
 ## Cloud Functions — when needed
 

@@ -4,6 +4,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 Firebase is wired **beside** Postgres (shared project `outrageldn-dashboard`). See [docs/FIREBASE-PHASE-2.md](docs/FIREBASE-PHASE-2.md).
 
+**Review images** upload to Firebase Storage (`FIREBASE_STORAGE_BUCKET`), not S3. Paths: `review-media/{shopId}/…`.
+
 - Keep `REVIEWS_DATA_BACKEND=postgres` until repositories are ported.
 - Smoke check: `GET /api/firebase/health`
 - Do **not** deploy Firestore rules from this repo (they are merged into the main dashboard).

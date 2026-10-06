@@ -27,7 +27,15 @@ export const env = {
     process.env.FIREBASE_PROJECT_ID ||
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     "outrageldn-dashboard",
-  firebaseStorageBucket: () => process.env.FIREBASE_STORAGE_BUCKET || null,
+  firebaseStorageBucket: () => {
+    const value =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!value) {
+      throw new Error("FIREBASE_STORAGE_BUCKET is not set");
+    }
+    return value;
+  },
   reviewsDataBackend: () => {
     const value = (process.env.REVIEWS_DATA_BACKEND || "postgres").toLowerCase();
     if (value === "firestore" || value === "dual") return value as "firestore" | "dual";
@@ -52,16 +60,6 @@ export const env = {
       `${process.env.SHOPIFY_APP_URL ?? "http://localhost:3000"}/api/media`;
     return base.endsWith("/") ? base.slice(0, -1) : base;
   },
-  s3Bucket: () => required("S3_BUCKET"),
-  s3Region: () => process.env.S3_REGION ?? "auto",
-  s3Endpoint: () => process.env.S3_ENDPOINT,
-  s3AccessKeyId: () => required("S3_ACCESS_KEY_ID"),
-  s3SecretAccessKey: () => required("S3_SECRET_ACCESS_KEY"),
-  s3PublicBaseUrl: () => {
-    const base = required("S3_PUBLIC_BASE_URL");
-    return base.endsWith("/") ? base.slice(0, -1) : base;
-  },
-  s3ForcePathStyle: () => process.env.S3_FORCE_PATH_STYLE === "true",
   mediaUploadMaxBytes: () =>
     Number(process.env.MEDIA_UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024),
   mediaPresignExpiresSeconds: () =>

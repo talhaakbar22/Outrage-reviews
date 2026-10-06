@@ -17,6 +17,7 @@ export function extensionForContentType(contentType: AllowedImageContentType) {
   return CONTENT_TYPE_EXTENSION[contentType];
 }
 
+/** Pending browser uploads before processing. */
 export function buildPendingUploadKey(input: {
   shopId: string;
   requestId: string;
@@ -26,20 +27,22 @@ export function buildPendingUploadKey(input: {
   const extension = extensionForContentType(input.contentType);
 
   return [
-    "pending",
+    "review-media",
     sanitizeSegment(input.shopId),
+    "pending",
     sanitizeSegment(input.requestId),
     `${uploadId}.${extension}`,
   ].join("/");
 }
 
+/** Processed review images in Firebase Storage. */
 export function buildProcessedMediaKeys(input: {
   shopId: string;
   reviewId: string;
   reviewMediaId: string;
 }) {
   const prefix = [
-    "reviews",
+    "review-media",
     sanitizeSegment(input.shopId),
     sanitizeSegment(input.reviewId),
     sanitizeSegment(input.reviewMediaId),
@@ -52,7 +55,7 @@ export function buildProcessedMediaKeys(input: {
 }
 
 export function assertPendingUploadKey(key: string, shopId: string, requestId: string) {
-  const expectedPrefix = `pending/${sanitizeSegment(shopId)}/${sanitizeSegment(requestId)}/`;
+  const expectedPrefix = `review-media/${sanitizeSegment(shopId)}/pending/${sanitizeSegment(requestId)}/`;
   if (!key.startsWith(expectedPrefix)) {
     throw new Error("Invalid media key for this review request");
   }

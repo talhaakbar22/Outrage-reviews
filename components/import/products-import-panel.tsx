@@ -13,9 +13,13 @@ type CsvResult = {
   message?: string;
 };
 
-export function ProductsImportPanel() {
+type ProductsImportPanelProps = {
+  shop?: string;
+};
+
+export function ProductsImportPanel({ shop: shopProp }: ProductsImportPanelProps) {
   const searchParams = useSearchParams();
-  const shop = searchParams.get("shop");
+  const shop = shopProp || searchParams.get("shop");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<"csv" | "shopify" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -48,6 +52,10 @@ export function ProductsImportPanel() {
       }
       setResult(data);
       setMessage(data.message ?? "Shopify product sync completed.");
+      // Reload so Products tab picks up newly synced rows.
+      window.setTimeout(() => {
+        window.location.href = `/dashboard/products?shop=${encodeURIComponent(shop)}`;
+      }, 600);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Shopify sync failed");
     } finally {
@@ -90,6 +98,9 @@ export function ProductsImportPanel() {
       }
       setResult(data);
       setMessage(data.message ?? "CSV import completed.");
+      window.setTimeout(() => {
+        window.location.href = `/dashboard/products?shop=${encodeURIComponent(shop)}`;
+      }, 600);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "CSV import failed");
     } finally {

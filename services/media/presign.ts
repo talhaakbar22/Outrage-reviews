@@ -37,8 +37,9 @@ function buildPendingMediaKey(input: {
   const uploadId = randomBytes(16).toString("hex");
 
   return [
-    "pending",
+    "review-media",
     sanitizeSegment(input.shopId),
+    "pending",
     sanitizeSegment(input.ownerId),
     `${uploadId}.${extension}`,
   ].join("/");

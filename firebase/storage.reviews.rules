@@ -1,14 +1,20 @@
 rules_version = '2';
 
-// FRAGMENT for Outrage Reviews media in Firebase Storage.
-// Merge into the shared project storage rules before deploying.
-// Object layout: review-media/{shopId}/{reviewId}/{filename}
+// Outrage Reviews media in Firebase Storage (outrageldn-dashboard).
+// Object layout:
+//   review-media/{shopId}/pending/{uploadSessionOrRequestId}/{file}  — inbound uploads
+//   review-media/{shopId}/{reviewId}/{mediaId}/{full|thumb}.webp     — processed
+//
+// Writes go through Admin SDK / signed GCS URLs / the Next.js upload proxy
+// (those paths bypass these rules). Public read is for storefront widgets.
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /review-media/{shopId}/{reviewId}/{fileName} {
-      // Public read for published review widgets (URLs are unguessable enough with UUID paths).
-      // Writes only via Admin SDK / signed uploads from the Next.js API.
+    match /review-media/{shopId}/pending/{ownerId}/{fileName} {
+      allow read, write: if false;
+    }
+
+    match /review-media/{shopId}/{reviewId}/{mediaId}/{fileName} {
       allow read: if true;
       allow write: if false;
     }

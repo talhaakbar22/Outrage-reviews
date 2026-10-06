@@ -36,12 +36,14 @@ function countLabel(value: number | undefined) {
 }
 
 export function LooxImportPanel({
+  shop: shopProp,
   onCompleted,
 }: {
+  shop?: string;
   onCompleted?: () => void;
 } = {}) {
   const searchParams = useSearchParams();
-  const shop = searchParams.get("shop");
+  const shop = shopProp || searchParams.get("shop");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
