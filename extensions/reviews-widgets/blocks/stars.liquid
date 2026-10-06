@@ -1,7 +1,8 @@
 {% comment %}
-  Star rating from product metafields (reviews.rating / reviews.count).
-  Use in product cards (Featured products / collection grids) or PDP.
-  Product setting uses autofill so each card receives the correct product.
+  Optional PDP-only star block (for themes that allow @app blocks inside
+  Product information). For collections / search / cart / under EVERY title,
+  enable the App embed "Product card ratings" instead — Collection sections
+  often do not support app blocks ("No app blocks available for this section").
 {% endcomment %}
 
 {% liquid
@@ -82,24 +83,30 @@
 
 {% schema %}
 {
-  "name": "Star rating",
+  "name": "Star rating (PDP only)",
   "target": "section",
   "stylesheet": "reviews-widget.css",
-  "templates": ["product", "collection", "index", "search", "page", "cart"],
+  "enabled_on": {
+    "templates": ["product"]
+  },
   "settings": [
+    {
+      "type": "paragraph",
+      "content": "Optional on the product page only. For stars under titles on collections, search, and cart: Theme settings → App embeds → enable Product card ratings. Collection sections usually cannot host this block."
+    },
     {
       "type": "product",
       "id": "product",
       "label": "Product",
       "autofill": true,
-      "info": "Leave blank on product cards — autofill uses the card’s product."
+      "info": "Leave blank — autofill uses the current product."
     },
     {
       "type": "select",
       "id": "layout",
       "label": "Layout",
       "options": [
-        { "value": "card", "label": "Under product title (card)" },
+        { "value": "card", "label": "Under product title" },
         { "value": "inline", "label": "Inline" }
       ],
       "default": "card"

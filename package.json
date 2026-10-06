@@ -20,7 +20,9 @@
     "worker:ratings": "tsx --import dotenv/config workers/shopify-ratings.worker.ts",
     "worker:ai-summary": "tsx --import dotenv/config workers/ai-summary.worker.ts",
     "shopify:dev": "node scripts/shopify-dev.mjs",
-    "shopify:deploy": "node scripts/prepare-shopify-deploy.mjs"
+    "shopify:deploy": "node scripts/prepare-shopify-deploy.mjs",
+    "firebase:emulators": "npx -y firebase-tools@latest emulators:start --only auth,firestore,functions,storage",
+    "firebase:deploy:functions": "npx -y firebase-tools@latest deploy --only functions:outrage-reviews"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
@@ -34,6 +36,8 @@
     "@shopify/polaris": "^13.9.5",
     "@shopify/shopify-api": "^14.0.0",
     "bullmq": "^6.3.1",
+    "firebase": "^12.19.0",
+    "firebase-admin": "^14.5.0",
     "ioredis": "^6.0.0",
     "next": "16.3.3",
     "nodemailer": "^10.0.3",
@@ -51,6 +55,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
+    "firebase-tools": "^15.32.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

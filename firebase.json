@@ -1,0 +1,34 @@
+{
+  "firestore": {
+    "rules": "firebase/firestore.reviews.rules",
+    "indexes": "firebase/firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "firebase/storage.reviews.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "outrage-reviews",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local",
+        ".env",
+        ".env.*"
+      ]
+    }
+  ],
+  "emulators": {
+    "auth": { "port": 9099 },
+    "functions": { "port": 5001 },
+    "firestore": { "port": 8080 },
+    "storage": { "port": 9199 },
+    "ui": { "enabled": true, "port": 4000 },
+    "hub": { "port": 4400 },
+    "singleProjectMode": true
+  }
+}

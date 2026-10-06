@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Firebase (Phase 2)
+
+Firebase is wired **beside** Postgres (shared project `outrageldn-dashboard`). See [docs/FIREBASE-PHASE-2.md](docs/FIREBASE-PHASE-2.md).
+
+- Keep `REVIEWS_DATA_BACKEND=postgres` until repositories are ported.
+- Smoke check: `GET /api/firebase/health`
+- Do **not** deploy Firestore rules from this repo (they are merged into the main dashboard).
+
 ## Getting Started
 
 First, run the development server:

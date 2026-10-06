@@ -1,7 +1,12 @@
 {% comment %}
   App embed (Loox-style): injects star rating + review count under product titles
   site-wide — collections, featured grids, search, predictive search, related
-  products, cart page, and cart drawer. Enable once under Theme settings → App embeds.
+  products, cart, cart drawer, AND the product page title.
+
+  Enable once: Theme settings → App embeds → Product card ratings → ON → Save.
+
+  Do NOT add the "Star rating" section block to Collection → Apps. This theme's
+  Collection section does not accept @app blocks inside the product grid.
 {% endcomment %}
 
 {% liquid
@@ -12,17 +17,19 @@
   endif
 %}
 
-<div
-  data-outrage-card-ratings
-  data-endpoint="{{ ratings_endpoint | escape }}"
-  data-star-size="{{ block.settings.star_size }}"
-  data-star-color="{{ block.settings.star_color | escape }}"
-  data-show-count="{% if block.settings.show_count %}true{% else %}false{% endif %}"
-  data-show-empty="{% if block.settings.show_empty %}true{% else %}false{% endif %}"
-  hidden
-></div>
-
-<script src="{{ 'product-card-ratings.js' | asset_url }}" defer></script>
+<div {{ block.shopify_attributes }}>
+  <div
+    data-outrage-card-ratings
+    data-endpoint="{{ ratings_endpoint | escape }}"
+    data-star-size="{{ block.settings.star_size }}"
+    data-star-color="{{ block.settings.star_color | escape }}"
+    data-show-count="{% if block.settings.show_count %}true{% else %}false{% endif %}"
+    data-show-empty="{% if block.settings.show_empty %}true{% else %}false{% endif %}"
+    data-include-pdp="{% if block.settings.include_pdp %}true{% else %}false{% endif %}"
+    hidden
+  ></div>
+  <script src="{{ 'product-card-ratings.js' | asset_url }}" defer></script>
+</div>
 
 {% schema %}
 {
@@ -32,7 +39,13 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Loox-style stars under every product name: collections, search, predictive search, related products, cart, and cart drawer. Turn this App embed ON once for the whole theme, then Save."
+      "content": "Shows stars under every product name store-wide (collections, search, cart, product page). Turn this App embed ON once — Theme settings → App embeds. This is the correct Loox-style setup. Do not use the Star rating section block on collection pages."
+    },
+    {
+      "type": "checkbox",
+      "id": "include_pdp",
+      "label": "Also show under the product page title",
+      "default": true
     },
     {
       "type": "checkbox",
@@ -44,7 +57,7 @@
       "type": "checkbox",
       "id": "show_empty",
       "label": "Show “No reviews yet” when a product has no reviews",
-      "default": false
+      "default": true
     },
     {
       "type": "range",

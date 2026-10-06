@@ -1,0 +1,103 @@
+rules_version = '2';
+
+// FRAGMENT for Outrage Reviews (`reviewShops`).
+//
+// IMPORTANT: This project shares Firebase project `outrageldn-dashboard` with the main
+// dashboard. Do NOT deploy this file alone — it would wipe the dashboard rules.
+// The authoritative copy is merged into outragelondondashboard/firestore.rules.
+// Keep this fragment as the reviews-owned source of truth to copy/merge from.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Dashboard staff who already use Firebase Auth on outrageldn-dashboard.
+    // Writes stay Admin-SDK-only so Shopify tokens / request token hashes never
+    // go through the client SDK.
+    match /reviewShops/{shopId} {
+      allow read: if isAuthed();
+      allow write: if false;
+
+      match /settings/{docId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      match /sessions/{sessionId} {
+        // Offline OAuth tokens — server only.
+        allow read, write: if false;
+      }
+
+      match /products/{productId} {
+        allow read: if isAuthed();
+        allow write: if false;
+
+        match /{sub=**} {
+          allow read: if isAuthed();
+          allow write: if false;
+        }
+      }
+
+      match /customers/{customerId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      match /orders/{orderId} {
+        allow read: if isAuthed();
+        allow write: if false;
+
+        match /lineItems/{lineItemId} {
+          allow read: if isAuthed();
+          allow write: if false;
+        }
+      }
+
+      match /reviews/{reviewId} {
+        allow read: if isAuthed();
+        allow write: if false;
+
+        match /media/{mediaId} {
+          allow read: if isAuthed();
+          allow write: if false;
+        }
+
+        match /replies/{replyId} {
+          allow read: if isAuthed();
+          allow write: if false;
+        }
+      }
+
+      match /reviewRequests/{requestId} {
+        // Contains tokenHash — never client-readable.
+        allow read, write: if false;
+      }
+
+      match /webhookEvents/{eventId} {
+        allow read, write: if false;
+      }
+
+      match /syncJobs/{jobId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      match /referralAdvocates/{advocateId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      match /referralRedemptions/{redemptionId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+
+      match /staff/{userId} {
+        allow read: if isAuthed();
+        allow write: if false;
+      }
+    }
+  }
+}

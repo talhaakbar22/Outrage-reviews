@@ -30,6 +30,38 @@
 .or-stars--compact {
   gap: 0.3rem;
   margin: 0.25rem 0 0.15rem;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Outrage London PDP — under title, above price */
+.pdp-title-row .or-stars,
+.product-block--header .or-stars,
+h1.pdp-title + .or-stars,
+h1.product-single__title + .or-stars {
+  display: flex;
+  width: 100%;
+  margin: 0.4rem 0 0.65rem;
+}
+
+/* Collection / recently viewed cards — under name */
+.ol-col-card__meta .or-stars,
+.ol-col-card__name + .or-stars,
+.recent-card__meta .or-stars,
+.recent-card__title + .or-stars,
+.recent-card__name + .or-stars {
+  display: flex;
+  width: 100%;
+  margin: 0.2rem 0 0.35rem;
+}
+
+/* Never stretch beside product images */
+.ol-col-card__slider-stage > .or-stars,
+.ol-col-card__imgwrap > .or-stars,
+.recent-card__media > .or-stars,
+.recent-card__image > .or-stars {
+  display: none !important;
 }
 
 .or-stars--compact .or-stars__count {

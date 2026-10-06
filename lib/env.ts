@@ -23,6 +23,16 @@ export const env = {
   shopifyApiKey: () => required("SHOPIFY_API_KEY"),
   shopifyApiSecret: () => required("SHOPIFY_API_SECRET"),
   databaseUrl: () => required("DATABASE_URL"),
+  firebaseProjectId: () =>
+    process.env.FIREBASE_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    "outrageldn-dashboard",
+  firebaseStorageBucket: () => process.env.FIREBASE_STORAGE_BUCKET || null,
+  reviewsDataBackend: () => {
+    const value = (process.env.REVIEWS_DATA_BACKEND || "postgres").toLowerCase();
+    if (value === "firestore" || value === "dual") return value as "firestore" | "dual";
+    return "postgres" as const;
+  },
   appUrl,
   appHost: () => {
     const url = appUrl();

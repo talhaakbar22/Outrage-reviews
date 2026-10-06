@@ -116,23 +116,19 @@ export const STORE_REVIEWS_STEPS = [
 
 export const PRODUCT_CARD_RATINGS_STEPS = [
   {
-    title: "Deploy the theme extension",
-    body: "Run `yarn shopify:dev` or `yarn shopify:deploy` so “Product card ratings” appears under App embeds.",
-  },
-  {
-    title: "Open App embeds (not product sections)",
-    body: "Theme editor → Theme settings (nested dots) → App embeds. Do not look under Product information → Add block.",
+    title: "Open App embeds (required)",
+    body: "Theme editor → Theme settings (⋯ or left gear) → App embeds. Do not add “Star rating” under Collection → Apps — that section cannot place blocks inside product cards (“No app blocks available”).",
   },
   {
     title: "Enable Product card ratings",
-    body: "Find Outrage Reviews → Product card ratings → turn the toggle ON → Save. This is the Loox-style site-wide embed.",
+    body: "Find Outrage Reviews → Product card ratings → turn the toggle ON → Save. This injects stars under every product title store-wide (collections, search, cart, product page).",
   },
   {
-    title: "Check collection, search, and cart",
-    body: "Stars appear under product names on collections, search results, predictive search, related products, cart page, and cart drawer — without opening the product page.",
+    title: "Remove stray Star rating Apps sections",
+    body: "If you added Star rating under Template → Apps on the collection template, remove those — they only render one block in a page section, not under each card.",
   },
   {
-    title: "Keep “Show product rating” on (optional)",
-    body: "In Product grid settings you can also leave Shopify’s Show product rating ON. Outrage now writes the standard rating metafields Dawn uses.",
+    title: "Verify",
+    body: "Open a collection and a product page. Stars should appear under titles after Save (hard-refresh if needed).",
   },
 ] as const;
