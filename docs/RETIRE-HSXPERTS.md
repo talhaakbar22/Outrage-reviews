@@ -6,8 +6,8 @@ The client domain **https://hsxperts.co** is no longer acceptable.
 
 | Concern | Old | New |
 |---|---|---|
-| Staff UI entry | Open hsxperts.co | Firebase-hosted **Outrage London dashboard** → Stock Management → Outrage Reviews |
-| Shopify `application_url` | `https://hsxperts.co` | Firebase project **`outrageldn-dashboard`** (App Hosting / custom domain for the Next reviews app) |
+| Staff UI entry | Open | Firebase-hosted **Outrage London dashboard** → Stock Management → Outrage Reviews |
+| Shopify `application_url` | **`https://nthio.app`** (production Reviews host) |
 | Data backend | Postgres on the old host | Firebase Firestore (`reviewShops/…`) — Phase 2+ |
 | Local OAuth | often pointed at hsxperts | `SHOPIFY_APP_URL` = ngrok HTTPS while developing |
 
@@ -24,14 +24,14 @@ The client domain **https://hsxperts.co** is no longer acceptable.
 3. Until Firebase App Hosting for Reviews is live, use your **ngrok** URL for local installs:
    - App URL: `https://YOUR-NGROK.ngrok-free.app`
    - Redirect: `https://YOUR-NGROK.ngrok-free.app/api/auth/callback`
-4. When Reviews is deployed on Firebase, set App URL + redirect to that Firebase HTTPS host (not hsxperts.co).
+4. Production App URL + redirect must be **`https://nthio.app`** (not hsxperts.co).
 
-## Firebase Hosting note
+## Production host
 
-`https://outrageldn-dashboard.web.app` currently serves the **main dashboard SPA**, not the Next.js Reviews API routes. Shopify OAuth/callbacks need the Reviews Next (or Cloud Functions) host. Plan:
+- App URL: `https://nthio.app`
+- OAuth callback: `https://nthio.app/api/auth/callback`
+- App proxy: `https://nthio.app/api/storefront` (via `/apps/outrage-reviews`)
 
-1. Deploy Outrage Reviews to **Firebase App Hosting** (or Cloud Run) on `outrageldn-dashboard`.
-2. Point Shopify Partners + `SHOPIFY_APP_URL` at that URL.
-3. Keep staff launching Reviews from the dashboard tab (Firebase Auth already on that project).
+After changing the domain, run `yarn shopify:deploy` so Shopify Partners picks up the new URLs.
 
 See also: [FIREBASE-PHASE-2.md](./FIREBASE-PHASE-2.md).

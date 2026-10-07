@@ -4,15 +4,13 @@
 # Deploy:     yarn shopify:deploy  (one deploy; every installed store gets the extension)
 # Installs:   each store installs the same app — OAuth is per-shop offline session
 #
-# hsxperts.co is RETIRED. Production application_url must be the Firebase-hosted
-# Outrage Reviews URL on project outrageldn-dashboard (App Hosting / custom domain).
+# Production host: https://nthio.app (Shopify App URL + OAuth callback).
 # Locally set SHOPIFY_APP_URL in .env (ngrok HTTPS). automatically_update_urls_on_dev
 # rewrites Partners URLs while `yarn shopify:dev` runs.
 
 client_id = "ec07942824b8f47726108667643974e8"
 name = "Outrage Reviews"
-# Placeholder until Firebase App Hosting URL is live — override via SHOPIFY_APP_URL / shopify app dev.
-application_url = "https://outrageldn-dashboard.web.app"
+application_url = "https://nthio.app"
 embedded = true
 
 [build]
@@ -23,7 +21,7 @@ scopes = "read_products,write_products,read_orders,read_customers,write_customer
 
 [auth]
 redirect_urls = [
-  "https://outrageldn-dashboard.web.app/api/auth/callback"
+  "https://nthio.app/api/auth/callback"
 ]
 
 [app_proxy]

@@ -2,9 +2,8 @@
 
 ## Retiring hsxperts.co
 
-**https://hsxperts.co is retired.** Staff enter Reviews from the Firebase-hosted
-dashboard; Shopify App URL must move to a Firebase App Hosting (or equivalent)
-HTTPS host on project `outrageldn-dashboard`. See [RETIRE-HSXPERTS.md](./RETIRE-HSXPERTS.md).
+**https://hsxperts.co is retired.** Production Shopify App URL is **`https://nthio.app`**.
+Staff may still enter Reviews from the Firebase-hosted dashboard. See [RETIRE-HSXPERTS.md](./RETIRE-HSXPERTS.md).
 
 ## Verdict
 
